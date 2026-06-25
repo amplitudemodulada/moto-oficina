@@ -10,6 +10,7 @@ import { Estoque } from './pages/Estoque'
 import { Checkout } from './pages/Checkout'
 import { Financeiro } from './pages/Financeiro'
 import { Backup } from './pages/Backup'
+import { Welcome } from './pages/Welcome'
 import { Wrench } from 'lucide-react'
 
 function LoadingScreen() {
@@ -33,6 +34,9 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Tela de boas-vindas — sem sidebar */}
+      <Route path="/welcome" element={<Welcome />} />
+
       <Route element={<Layout />}>
         <Route path="/"           element={<Dashboard />} />
         <Route path="/clientes"   element={<Clientes />} />
@@ -40,7 +44,6 @@ function AppRoutes() {
         <Route path="/estoque"    element={<Estoque />} />
         <Route path="/checkout"   element={<Checkout />} />
         <Route path="/financeiro" element={<Financeiro />} />
-        {/* Admin-only routes */}
         <Route
           path="/backup"
           element={isAdmin ? <Backup /> : <Navigate to="/" replace />}

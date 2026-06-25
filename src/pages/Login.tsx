@@ -1,4 +1,5 @@
 import { useState, FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Wrench, Eye, EyeOff, LogIn, Lock, User, ShieldCheck, Headset } from 'lucide-react'
 import { Button } from '../components/ui/Button'
@@ -10,6 +11,7 @@ const HINTS = [
 
 export function Login() {
   const { login } = useAuth()
+  const navigate  = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPw,   setShowPw]   = useState(false)
@@ -23,12 +25,14 @@ export function Login() {
     setLoading(true)
     setError('')
     const result = await login(username.trim(), password)
-    if (result === 'invalid') {
+    if (result === 'ok') {
+      navigate('/welcome', { replace: true })
+    } else {
       setAttempts(a => a + 1)
       setError('Usuário ou senha incorretos')
       setPassword('')
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   function fillHint(h: typeof HINTS[0]) {
