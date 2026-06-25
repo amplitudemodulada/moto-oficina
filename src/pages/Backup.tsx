@@ -6,11 +6,14 @@ import { storage } from '../utils/storage'
 import { seedDemoData, clearAllData, getAllDataForExport, restoreFromBackup, hasSeedData } from '../utils/seed'
 import { getUsers, resetPasswordAdmin } from '../utils/auth'
 import type { StoredUser } from '../utils/auth'
+import { getTelegramConfig, saveTelegramConfig, sendTelegram, msgLogin } from '../utils/telegram'
+import type { TelegramConfig } from '../utils/telegram'
 import {
   Download, Upload, Trash2, Database, CheckCircle,
   AlertTriangle, Users, Bike, ClipboardList, Package,
   TrendingDown, HardDrive, RefreshCw, Info, Sparkles,
   ShieldCheck, Headset, KeyRound, Eye, EyeOff,
+  Send, BellRing, BellOff, ExternalLink,
 } from 'lucide-react'
 
 const BACKUP_KEY = 'motogest_last_backup'
@@ -44,6 +47,28 @@ export function Backup() {
   const [message,       setMessage]       = useState('')
   const [pendingImport, setPendingImport] = useState<ReturnType<typeof getAllDataForExport> | null>(null)
   const [lastBackup,    setLastBackup]    = useState<string>(() => localStorage.getItem(BACKUP_KEY) ?? '')
+
+  // Telegram config
+  const [tgConfig,     setTgConfig]     = useState<TelegramConfig>(() => getTelegramConfig())
+  const [tgSaving,     setTgSaving]     = useState(false)
+  const [tgTesting,    setTgTesting]    = useState(false)
+  const [tgTestResult, setTgTestResult] = useState<'ok' | 'error' | null>(null)
+  const [showToken,    setShowToken]    = useState(false)
+
+  async function handleTgTest() {
+    setTgTesting(true)
+    setTgTestResult(null)
+    saveTelegramConfig(tgConfig)
+    const r = await sendTelegram(msgLogin('teste', 'admin'))
+    setTgTestResult(r)
+    setTgTesting(false)
+  }
+
+  function handleTgSave() {
+    setTgSaving(true)
+    saveTelegramConfig(tgConfig)
+    setTimeout(() => setTgSaving(false), 600)
+  }
 
   // User management
   const [systemUsers,   setSystemUsers]   = useState<StoredUser[]>(() => getUsers())
@@ -333,6 +358,109 @@ export function Backup() {
                 )
               })}
             </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Telegram notifications */}
+      <Card>
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-blue-400/10 rounded-xl shrink-0">
+            <BellRing size={22} className="text-blue-400" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-semibold text-white">Notificações Telegram</h3>
+              <button
+                type="button"
+                onClick={() => setTgConfig(c => ({ ...c, enabled: !c.enabled }))}
+                className={`relative w-10 h-5 rounded-full transition-colors ${tgConfig.enabled ? 'bg-blue-500' : 'bg-gray-700'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${tgConfig.enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+            <p className="text-sm text-gray-400 mb-4">
+              Receba uma mensagem no Telegram sempre que alguém fizer login ou logout no sistema.
+            </p>
+
+            <div className="space-y-3">
+              {/* Bot Token */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Bot Token</label>
+                <div className="relative">
+                  <input
+                    type={showToken ? 'text' : 'password'}
+                    value={tgConfig.botToken}
+                    onChange={e => setTgConfig(c => ({ ...c, botToken: e.target.value }))}
+                    placeholder="123456789:ABCdef..."
+                    className="w-full bg-gray-800 border border-gray-700 text-gray-100 rounded-lg pl-3 pr-10 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button type="button" onClick={() => setShowToken(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300" tabIndex={-1}>
+                    {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Chat ID */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Chat ID</label>
+                <input
+                  type="text"
+                  value={tgConfig.chatId}
+                  onChange={e => setTgConfig(c => ({ ...c, chatId: e.target.value }))}
+                  placeholder="-100123456789 ou @seuchat"
+                  className="w-full bg-gray-800 border border-gray-700 text-gray-100 rounded-lg px-3 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Test result */}
+              {tgTestResult && (
+                <div className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${tgTestResult === 'ok' ? 'text-green-400 bg-green-400/10 border border-green-400/20' : 'text-red-400 bg-red-400/10 border border-red-400/20'}`}>
+                  {tgTestResult === 'ok'
+                    ? <><CheckCircle size={12} /> Mensagem enviada com sucesso!</>
+                    : <><AlertTriangle size={12} /> Falha ao enviar. Verifique o token e o Chat ID.</>
+                  }
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <Button variant="secondary" size="sm" onClick={handleTgTest} loading={tgTesting}
+                  disabled={!tgConfig.botToken || !tgConfig.chatId}>
+                  <Send size={14} /> Testar
+                </Button>
+                <Button size="sm" onClick={handleTgSave} loading={tgSaving}>
+                  {tgConfig.enabled ? <BellRing size={14} /> : <BellOff size={14} />}
+                  {tgSaving ? 'Salvo!' : 'Salvar configuração'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <details className="mt-4">
+              <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300 transition-colors select-none">
+                Como configurar o bot Telegram
+              </summary>
+              <div className="mt-3 space-y-2 text-xs text-gray-500 bg-gray-800/50 rounded-xl p-3">
+                <p className="font-semibold text-gray-400">Passo a passo:</p>
+                <ol className="list-decimal list-inside space-y-1.5">
+                  <li>Abra o Telegram e busque por <span className="text-gray-300">@BotFather</span></li>
+                  <li>Envie <span className="font-mono text-gray-300">/newbot</span> e siga as instruções para criar seu bot</li>
+                  <li>Copie o <span className="text-gray-300">Token</span> fornecido pelo BotFather e cole acima</li>
+                  <li>Envie qualquer mensagem para o seu bot para iniciar o chat</li>
+                  <li>Busque por <span className="text-gray-300">@userinfobot</span> e envie <span className="font-mono text-gray-300">/start</span> para descobrir seu Chat ID</li>
+                  <li>Cole o Chat ID acima, clique em <span className="text-gray-300">Testar</span> e depois <span className="text-gray-300">Salvar</span></li>
+                </ol>
+                <a
+                  href="https://core.telegram.org/bots#botfather"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-blue-400 hover:text-blue-300 mt-2"
+                >
+                  <ExternalLink size={11} /> Documentação oficial
+                </a>
+              </div>
+            </details>
           </div>
         </div>
       </Card>
