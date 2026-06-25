@@ -1,22 +1,32 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, ClipboardList, Package, CreditCard,
-  Wrench, Menu, X, BarChart3, HardDrive
+  Wrench, Menu, X, BarChart3, HardDrive, LogOut, ShieldCheck, Headset
 } from 'lucide-react'
 import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 const NAV = [
-  { to: '/',           icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/clientes',   icon: Users,           label: 'Clientes & Motos' },
-  { to: '/ordens',     icon: ClipboardList,   label: 'Ordens de Serviço' },
-  { to: '/estoque',    icon: Package,         label: 'Estoque' },
-  { to: '/checkout',   icon: CreditCard,      label: 'Checkout' },
-  { to: '/financeiro', icon: BarChart3,       label: 'Financeiro' },
-  { to: '/backup',     icon: HardDrive,       label: 'Backup & Restore' },
+  { to: '/',           icon: LayoutDashboard, label: 'Dashboard',         adminOnly: false },
+  { to: '/clientes',   icon: Users,           label: 'Clientes & Motos',  adminOnly: false },
+  { to: '/ordens',     icon: ClipboardList,   label: 'Ordens de Serviço', adminOnly: false },
+  { to: '/estoque',    icon: Package,         label: 'Estoque',           adminOnly: false },
+  { to: '/checkout',   icon: CreditCard,      label: 'Checkout',          adminOnly: false },
+  { to: '/financeiro', icon: BarChart3,       label: 'Financeiro',        adminOnly: false },
+  { to: '/backup',     icon: HardDrive,       label: 'Backup & Restore',  adminOnly: true  },
 ]
+
+const ROLE_CONFIG = {
+  admin:   { label: 'Administrador', icon: ShieldCheck, color: 'text-orange-400', bg: 'bg-orange-400/10' },
+  suporte: { label: 'Suporte',       icon: Headset,     color: 'text-blue-400',   bg: 'bg-blue-400/10'   },
+}
 
 export function Sidebar() {
   const [open, setOpen] = useState(false)
+  const { session, isAdmin, logout } = useAuth()
+
+  const visibleNav = NAV.filter(item => !item.adminOnly || isAdmin)
+  const roleInfo = session ? ROLE_CONFIG[session.role] : null
 
   return (
     <>
@@ -57,8 +67,8 @@ export function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV.map(({ to, icon: Icon, label }) => (
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          {visibleNav.map(({ to, icon: Icon, label, adminOnly }) => (
             <NavLink
               key={to}
               to={to}
@@ -72,15 +82,39 @@ export function Sidebar() {
               `}
             >
               <Icon size={18} />
-              {label}
+              <span className="flex-1">{label}</span>
+              {adminOnly && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-500 font-semibold tracking-wide">
+                  ADMIN
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-800">
-          <p className="text-xs text-gray-600">v1.0.0 · LocalStorage</p>
-        </div>
+        {/* User footer */}
+        {session && roleInfo && (
+          <div className="px-3 py-3 border-t border-gray-800 space-y-2">
+            {/* User card */}
+            <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg ${roleInfo.bg}`}>
+              <div className="p-1.5 bg-gray-900/50 rounded-lg">
+                <roleInfo.icon size={15} className={roleInfo.color} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{session.username}</p>
+                <p className={`text-[10px] ${roleInfo.color}`}>{roleInfo.label}</p>
+              </div>
+            </div>
+            {/* Logout */}
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
+            >
+              <LogOut size={16} />
+              <span className="text-xs font-medium">Sair do sistema</span>
+            </button>
+          </div>
+        )}
       </aside>
     </>
   )
