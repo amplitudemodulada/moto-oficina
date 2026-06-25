@@ -61,7 +61,24 @@ export async function initDefaultUsers(): Promise<void> {
   ])
 }
 
-export async function changePassword(username: string, newPassword: string): Promise<void> {
+export type ChangePasswordResult = 'ok' | 'wrong_current' | 'not_found'
+
+export async function changePasswordSelf(
+  username: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<ChangePasswordResult> {
+  const users = getUsers()
+  const idx = users.findIndex(u => u.username === username)
+  if (idx === -1) return 'not_found'
+  const currentHash = await hashPassword(currentPassword)
+  if (currentHash !== users[idx].passwordHash) return 'wrong_current'
+  users[idx].passwordHash = await hashPassword(newPassword)
+  saveUsers(users)
+  return 'ok'
+}
+
+export async function resetPasswordAdmin(username: string, newPassword: string): Promise<void> {
   const users = getUsers()
   const idx = users.findIndex(u => u.username === username)
   if (idx === -1) return

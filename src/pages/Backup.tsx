@@ -4,10 +4,13 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { storage } from '../utils/storage'
 import { seedDemoData, clearAllData, getAllDataForExport, restoreFromBackup, hasSeedData } from '../utils/seed'
+import { getUsers, resetPasswordAdmin } from '../utils/auth'
+import type { StoredUser } from '../utils/auth'
 import {
   Download, Upload, Trash2, Database, CheckCircle,
   AlertTriangle, Users, Bike, ClipboardList, Package,
-  TrendingDown, HardDrive, RefreshCw, Info, Sparkles
+  TrendingDown, HardDrive, RefreshCw, Info, Sparkles,
+  ShieldCheck, Headset, KeyRound, Eye, EyeOff,
 } from 'lucide-react'
 
 const BACKUP_KEY = 'motogest_last_backup'
@@ -28,14 +31,30 @@ function dataSize(): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-type ModalType = 'seed_confirm' | 'clear_confirm' | 'import_confirm' | 'success' | 'error' | null
+const ROLE_INFO = {
+  admin:   { label: 'Administrador', icon: ShieldCheck, color: 'text-orange-400', bg: 'bg-orange-400/10' },
+  suporte: { label: 'Suporte',       icon: Headset,     color: 'text-blue-400',   bg: 'bg-blue-400/10'   },
+}
+
+type ModalType = 'seed_confirm' | 'clear_confirm' | 'import_confirm' | 'success' | 'error' | 'reset_pw' | null
 
 export function Backup() {
   const fileRef = useRef<HTMLInputElement>(null)
-  const [modalType, setModalType] = useState<ModalType>(null)
-  const [message, setMessage] = useState('')
+  const [modalType,     setModalType]     = useState<ModalType>(null)
+  const [message,       setMessage]       = useState('')
   const [pendingImport, setPendingImport] = useState<ReturnType<typeof getAllDataForExport> | null>(null)
-  const [lastBackup, setLastBackup] = useState<string>(() => localStorage.getItem(BACKUP_KEY) ?? '')
+  const [lastBackup,    setLastBackup]    = useState<string>(() => localStorage.getItem(BACKUP_KEY) ?? '')
+
+  // User management
+  const [systemUsers,   setSystemUsers]   = useState<StoredUser[]>(() => getUsers())
+  const [resetTarget,   setResetTarget]   = useState<StoredUser | null>(null)
+  const [newPw,         setNewPw]         = useState('')
+  const [confirmPw,     setConfirmPw]     = useState('')
+  const [showNewPw,     setShowNewPw]     = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
+  const [pwError,       setPwError]       = useState('')
+  const [pwSaving,      setPwSaving]      = useState(false)
+  const [pwSuccess,     setPwSuccess]     = useState(false)
 
   const stats = {
     clientes: storage.clientes.getAll().length,
@@ -110,6 +129,30 @@ export function Backup() {
     clearAllData()
     setModalType(null)
     window.location.reload()
+  }
+
+  // ── Reset password (admin) ────────────────────────────────────────────────
+  function openResetPw(user: StoredUser) {
+    setResetTarget(user)
+    setNewPw('')
+    setConfirmPw('')
+    setPwError('')
+    setPwSuccess(false)
+    setShowNewPw(false)
+    setShowConfirmPw(false)
+    setModalType('reset_pw')
+  }
+
+  async function confirmResetPw() {
+    if (!resetTarget) return
+    if (newPw.length < 6)     { setPwError('Mínimo 6 caracteres'); return }
+    if (newPw !== confirmPw)  { setPwError('As senhas não coincidem'); return }
+    setPwSaving(true)
+    setPwError('')
+    await resetPasswordAdmin(resetTarget.username, newPw)
+    setSystemUsers(getUsers())
+    setPwSaving(false)
+    setPwSuccess(true)
   }
 
   return (
@@ -255,6 +298,45 @@ export function Backup() {
         </div>
       </Card>
 
+      {/* User management */}
+      <Card>
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-orange-400/10 rounded-xl shrink-0">
+            <KeyRound size={22} className="text-orange-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-white">Gerenciar Usuários</h3>
+            <p className="text-sm text-gray-400 mt-1 mb-4">
+              Redefina a senha de qualquer usuário do sistema sem precisar da senha atual.
+            </p>
+            <div className="space-y-2">
+              {systemUsers.map(user => {
+                const info = ROLE_INFO[user.role]
+                return (
+                  <div
+                    key={user.username}
+                    className="flex items-center justify-between p-3 bg-gray-800/60 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${info.bg}`}>
+                        <info.icon size={16} className={info.color} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{user.username}</p>
+                        <p className={`text-xs ${info.color}`}>{info.label}</p>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => openResetPw(user)}>
+                      <KeyRound size={14} /> Redefinir senha
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* Danger zone */}
       <Card className="border-red-500/20">
         <div className="flex items-start gap-4">
@@ -380,6 +462,100 @@ export function Backup() {
           <p className="text-gray-300 text-sm">{message}</p>
           <Button variant="secondary" className="w-full" onClick={() => setModalType(null)}>Fechar</Button>
         </div>
+      </Modal>
+
+      {/* Reset password (admin) */}
+      <Modal
+        isOpen={modalType === 'reset_pw'}
+        onClose={() => setModalType(null)}
+        title={`Redefinir senha — ${resetTarget?.username ?? ''}`}
+        size="sm"
+      >
+        {pwSuccess ? (
+          <div className="text-center space-y-4 py-2">
+            <div className="w-14 h-14 bg-green-400/10 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle size={28} className="text-green-400" />
+            </div>
+            <div>
+              <p className="text-white font-semibold">Senha redefinida!</p>
+              <p className="text-gray-400 text-sm mt-1">
+                O usuário <span className="text-white font-medium">{resetTarget?.username}</span> já pode usar a nova senha.
+              </p>
+            </div>
+            <Button className="w-full" onClick={() => setModalType(null)}>Fechar</Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {resetTarget && (
+              <div className={`flex items-center gap-3 p-3 rounded-xl ${ROLE_INFO[resetTarget.role].bg}`}>
+                {(() => { const I = ROLE_INFO[resetTarget.role].icon; return <I size={16} className={ROLE_INFO[resetTarget.role].color} /> })()}
+                <div>
+                  <p className="text-sm font-semibold text-white">{resetTarget.username}</p>
+                  <p className={`text-xs ${ROLE_INFO[resetTarget.role].color}`}>{ROLE_INFO[resetTarget.role].label}</p>
+                </div>
+              </div>
+            )}
+
+            {/* New password */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Nova senha</label>
+              <div className="relative">
+                <input
+                  type={showNewPw ? 'text' : 'password'}
+                  value={newPw}
+                  onChange={e => { setNewPw(e.target.value); setPwError('') }}
+                  placeholder="Mínimo 6 caracteres"
+                  className="w-full bg-gray-800 border border-gray-700 text-gray-100 rounded-lg pl-3 pr-10 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                <button type="button" onClick={() => setShowNewPw(p => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300" tabIndex={-1}>
+                  {showNewPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Confirmar nova senha</label>
+              <div className="relative">
+                <input
+                  type={showConfirmPw ? 'text' : 'password'}
+                  value={confirmPw}
+                  onChange={e => { setConfirmPw(e.target.value); setPwError('') }}
+                  placeholder="Repita a nova senha"
+                  className="w-full bg-gray-800 border border-gray-700 text-gray-100 rounded-lg pl-3 pr-10 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                <button type="button" onClick={() => setShowConfirmPw(p => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300" tabIndex={-1}>
+                  {showConfirmPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Match indicator */}
+            {confirmPw.length > 0 && (
+              <div className={`flex items-center gap-1.5 text-xs ${newPw === confirmPw ? 'text-green-400' : 'text-red-400'}`}>
+                {newPw === confirmPw
+                  ? <><CheckCircle size={12} /> Senhas coincidem</>
+                  : <><AlertTriangle size={12} /> Senhas diferentes</>
+                }
+              </div>
+            )}
+
+            {pwError && (
+              <div className="flex items-center gap-2 text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+                <AlertTriangle size={12} /> {pwError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <Button variant="secondary" className="flex-1" onClick={() => setModalType(null)}>Cancelar</Button>
+              <Button className="flex-1" onClick={confirmResetPw} loading={pwSaving}>
+                <KeyRound size={15} /> Redefinir
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

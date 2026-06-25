@@ -1,10 +1,14 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, ClipboardList, Package, CreditCard,
-  Wrench, Menu, X, BarChart3, HardDrive, LogOut, ShieldCheck, Headset
+  Wrench, Menu, X, BarChart3, HardDrive, LogOut, ShieldCheck,
+  Headset, KeyRound, Eye, EyeOff, CheckCircle, AlertTriangle,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { changePasswordSelf } from '../utils/auth'
+import { Modal } from './ui/Modal'
+import { Button } from './ui/Button'
 
 const NAV = [
   { to: '/',           icon: LayoutDashboard, label: 'Dashboard',         adminOnly: false },
@@ -21,12 +25,82 @@ const ROLE_CONFIG = {
   suporte: { label: 'Suporte',       icon: Headset,     color: 'text-blue-400',   bg: 'bg-blue-400/10'   },
 }
 
-export function Sidebar() {
-  const [open, setOpen] = useState(false)
-  const { session, isAdmin, logout } = useAuth()
+interface PwForm { current: string; next: string; confirm: string }
+const emptyPw = (): PwForm => ({ current: '', next: '', confirm: '' })
 
+export function Sidebar() {
+  const [open,    setOpen]    = useState(false)
+  const [pwModal, setPwModal] = useState(false)
+  const [form,    setForm]    = useState<PwForm>(emptyPw())
+  const [shows,   setShows]   = useState({ current: false, next: false, confirm: false })
+  const [error,   setError]   = useState('')
+  const [success, setSuccess] = useState(false)
+  const [saving,  setSaving]  = useState(false)
+
+  const { session, isAdmin, logout } = useAuth()
   const visibleNav = NAV.filter(item => !item.adminOnly || isAdmin)
-  const roleInfo = session ? ROLE_CONFIG[session.role] : null
+  const roleInfo   = session ? ROLE_CONFIG[session.role] : null
+
+  function openPwModal() {
+    setForm(emptyPw())
+    setError('')
+    setSuccess(false)
+    setPwModal(true)
+  }
+
+  function closePwModal() {
+    setPwModal(false)
+    setError('')
+    setSuccess(false)
+  }
+
+  async function handleChangePw() {
+    if (!session) return
+    if (!form.current)          { setError('Informe a senha atual');              return }
+    if (form.next.length < 6)   { setError('Nova senha precisa ter 6+ caracteres'); return }
+    if (form.next !== form.confirm) { setError('As senhas novas não coincidem');   return }
+    setSaving(true)
+    setError('')
+    const result = await changePasswordSelf(session.username, form.current, form.next)
+    setSaving(false)
+    if (result === 'wrong_current') { setError('Senha atual incorreta'); return }
+    setSuccess(true)
+    setForm(emptyPw())
+  }
+
+  function toggle(field: keyof typeof shows) {
+    setShows(s => ({ ...s, [field]: !s[field] }))
+  }
+
+  function pwInput(
+    field: keyof PwForm,
+    label: string,
+    placeholder: string,
+    showKey: keyof typeof shows,
+  ) {
+    return (
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</label>
+        <div className="relative">
+          <input
+            type={shows[showKey] ? 'text' : 'password'}
+            value={form[field]}
+            onChange={e => { setForm(p => ({ ...p, [field]: e.target.value })); setError('') }}
+            placeholder={placeholder}
+            className="w-full bg-gray-800 border border-gray-700 text-gray-100 rounded-lg pl-3 pr-10 py-2.5 text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors"
+          />
+          <button
+            type="button"
+            onClick={() => toggle(showKey)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+            tabIndex={-1}
+          >
+            {shows[showKey] ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -38,12 +112,10 @@ export function Sidebar() {
         <Menu size={20} />
       </button>
 
-      {/* Overlay */}
       {open && (
         <div className="lg:hidden fixed inset-0 z-40 bg-black/60" onClick={() => setOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside className={`
         fixed top-0 left-0 h-full z-50 w-64 bg-gray-950 border-r border-gray-800
         flex flex-col transition-transform duration-300
@@ -94,7 +166,7 @@ export function Sidebar() {
 
         {/* User footer */}
         {session && roleInfo && (
-          <div className="px-3 py-3 border-t border-gray-800 space-y-2">
+          <div className="px-3 py-3 border-t border-gray-800 space-y-1.5">
             {/* User card */}
             <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg ${roleInfo.bg}`}>
               <div className="p-1.5 bg-gray-900/50 rounded-lg">
@@ -105,17 +177,86 @@ export function Sidebar() {
                 <p className={`text-[10px] ${roleInfo.color}`}>{roleInfo.label}</p>
               </div>
             </div>
+
+            {/* Change password */}
+            <button
+              onClick={openPwModal}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
+            >
+              <KeyRound size={15} />
+              Alterar senha
+            </button>
+
             {/* Logout */}
             <button
               onClick={logout}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
             >
-              <LogOut size={16} />
-              <span className="text-xs font-medium">Sair do sistema</span>
+              <LogOut size={15} />
+              Sair do sistema
             </button>
           </div>
         )}
       </aside>
+
+      {/* Change password modal */}
+      <Modal isOpen={pwModal} onClose={closePwModal} title="Alterar Minha Senha" size="sm">
+        {success ? (
+          <div className="text-center space-y-4 py-2">
+            <div className="w-14 h-14 bg-green-400/10 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle size={28} className="text-green-400" />
+            </div>
+            <div>
+              <p className="text-white font-semibold">Senha alterada!</p>
+              <p className="text-gray-400 text-sm mt-1">Sua nova senha já está ativa.</p>
+            </div>
+            <Button className="w-full" onClick={closePwModal}>Fechar</Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-500">
+              Usuário: <span className="text-gray-300 font-medium">{session?.username}</span>
+            </p>
+
+            {pwInput('current', 'Senha atual',        '••••••••', 'current')}
+            {pwInput('next',    'Nova senha',          'Mínimo 6 caracteres', 'next')}
+            {pwInput('confirm', 'Confirmar nova senha','••••••••', 'confirm')}
+
+            {/* Strength hint */}
+            {form.next.length > 0 && (
+              <div className="flex gap-1">
+                {[1,2,3,4].map(i => (
+                  <div
+                    key={i}
+                    className={`flex-1 h-1 rounded-full transition-colors ${
+                      form.next.length >= i * 3
+                        ? i <= 1 ? 'bg-red-500' : i === 2 ? 'bg-yellow-500' : i === 3 ? 'bg-blue-500' : 'bg-green-500'
+                        : 'bg-gray-700'
+                    }`}
+                  />
+                ))}
+                <span className="text-[10px] text-gray-500 ml-1 self-center">
+                  {form.next.length < 6 ? 'fraca' : form.next.length < 9 ? 'média' : form.next.length < 12 ? 'boa' : 'forte'}
+                </span>
+              </div>
+            )}
+
+            {error && (
+              <div className="flex items-center gap-2 text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+                <AlertTriangle size={12} />
+                {error}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <Button variant="secondary" className="flex-1" onClick={closePwModal}>Cancelar</Button>
+              <Button className="flex-1" onClick={handleChangePw} loading={saving}>
+                <KeyRound size={15} /> Salvar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   )
 }
