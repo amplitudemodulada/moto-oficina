@@ -60,3 +60,22 @@ export interface Produto {
 }
 
 export type PaymentMethod = 'pix' | 'credito' | 'debito' | 'dinheiro'
+
+export type DespesaCategoria =
+  | 'Aluguel'
+  | 'Ferramentas'
+  | 'Peças/Insumos'
+  | 'Salários'
+  | 'Impostos'
+  | 'Utilidades'
+  | 'Marketing'
+  | 'Outros'
+
+export interface Despesa {
+  id: string
+  descricao: string
+  valor: number
+  categoria: DespesaCategoria
+  data: string
+  createdAt: string
+}

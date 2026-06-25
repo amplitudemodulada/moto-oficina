@@ -1,10 +1,11 @@
-import type { Cliente, Moto, OrdemServico, Produto } from '../types'
+import type { Cliente, Moto, OrdemServico, Produto, Despesa } from '../types'
 
 const KEYS = {
-  clientes: 'motogest_clientes',
-  motos: 'motogest_motos',
-  ordens: 'motogest_ordens',
-  produtos: 'motogest_produtos',
+  clientes:  'motogest_clientes',
+  motos:     'motogest_motos',
+  ordens:    'motogest_ordens',
+  produtos:  'motogest_produtos',
+  despesas:  'motogest_despesas',
 }
 
 function load<T>(key: string): T[] {
@@ -36,6 +37,10 @@ export const storage = {
   produtos: {
     getAll: () => load<Produto>(KEYS.produtos),
     save: (data: Produto[]) => save(KEYS.produtos, data),
+  },
+  despesas: {
+    getAll: () => load<Despesa>(KEYS.despesas),
+    save: (data: Despesa[]) => save(KEYS.despesas, data),
   },
 }
 
