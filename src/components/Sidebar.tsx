@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, ClipboardList, Package, CreditCard, Wrench, Menu, X, BarChart3
+  LayoutDashboard, Users, ClipboardList, Package, CreditCard,
+  Wrench, Menu, X, BarChart3, HardDrive
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -11,6 +12,7 @@ const NAV = [
   { to: '/estoque',    icon: Package,         label: 'Estoque' },
   { to: '/checkout',   icon: CreditCard,      label: 'Checkout' },
   { to: '/financeiro', icon: BarChart3,       label: 'Financeiro' },
+  { to: '/backup',     icon: HardDrive,       label: 'Backup & Restore' },
 ]
 
 export function Sidebar() {

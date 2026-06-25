@@ -7,6 +7,7 @@ import { OrdemServico } from './pages/OrdemServico'
 import { Estoque } from './pages/Estoque'
 import { Checkout } from './pages/Checkout'
 import { Financeiro } from './pages/Financeiro'
+import { Backup } from './pages/Backup'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/estoque"    element={<Estoque />} />
             <Route path="/checkout"   element={<Checkout />} />
             <Route path="/financeiro" element={<Financeiro />} />
+            <Route path="/backup"     element={<Backup />} />
           </Route>
         </Routes>
       </BrowserRouter>
