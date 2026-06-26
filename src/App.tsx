@@ -12,6 +12,7 @@ import { Checkout } from './pages/Checkout'
 import { Financeiro } from './pages/Financeiro'
 import { Backup } from './pages/Backup'
 import { Welcome } from './pages/Welcome'
+import { Ajuda } from './pages/Ajuda'
 import { Wrench } from 'lucide-react'
 
 function LoadingScreen() {
@@ -46,6 +47,7 @@ function AppRoutes() {
         <Route path="/checkout"   element={<Checkout />} />
         <Route path="/financeiro" element={<Financeiro />} />
         <Route path="/backup" element={<Backup />} />
+        <Route path="/ajuda"  element={<Ajuda />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

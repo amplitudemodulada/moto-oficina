@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, ClipboardList, Package, CreditCard,
   Wrench, Menu, X, BarChart3, HardDrive, LogOut, ShieldCheck,
   Headset, KeyRound, Eye, EyeOff, CheckCircle, AlertTriangle,
-  Sun, Moon,
+  Sun, Moon, BookOpen,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
@@ -20,6 +20,7 @@ const NAV = [
   { to: '/checkout',   icon: CreditCard,      label: 'Checkout',          adminOnly: false },
   { to: '/financeiro', icon: BarChart3,       label: 'Financeiro',        adminOnly: false },
   { to: '/backup',     icon: HardDrive,       label: 'Backup & Restore',  adminOnly: false },
+  { to: '/ajuda',      icon: BookOpen,        label: 'Manual de Uso',     adminOnly: false },
 ]
 
 const ROLE_CONFIG = {
