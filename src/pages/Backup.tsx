@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 
 const BACKUP_KEY = 'motogest_last_backup'
+const SEED_KEY   = 'motogest_seed_done'
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', {
@@ -49,6 +50,7 @@ export function Backup() {
   const [message,       setMessage]       = useState('')
   const [pendingImport, setPendingImport] = useState<ReturnType<typeof getAllDataForExport> | null>(null)
   const [lastBackup,    setLastBackup]    = useState<string>(() => localStorage.getItem(BACKUP_KEY) ?? '')
+  const [seedDone,      setSeedDone]      = useState<boolean>(() => !!localStorage.getItem(SEED_KEY))
 
   // Telegram config
   const [tgConfig,     setTgConfig]     = useState<TelegramConfig>(() => getTelegramConfig())
@@ -147,6 +149,7 @@ export function Backup() {
   function confirmSeed() {
     clearAllData()
     seedDemoData()
+    localStorage.setItem(SEED_KEY, '1')
     setModalType(null)
     window.location.reload()
   }
@@ -154,6 +157,8 @@ export function Backup() {
   // ── Clear ─────────────────────────────────────────────────────────────────
   function confirmClear() {
     clearAllData()
+    localStorage.removeItem(SEED_KEY)
+    setSeedDone(false)
     setModalType(null)
     window.location.reload()
   }
@@ -311,16 +316,16 @@ export function Backup() {
               ))}
             </div>
 
-            {hasSeedData() && (
-              <div className="flex items-center gap-2 mt-3 text-xs text-orange-400 bg-orange-400/5 border border-orange-400/15 rounded-lg px-3 py-2">
-                <AlertTriangle size={12} />
-                Dados de demonstração já carregados. Carregar novamente irá substituir tudo.
+            {seedDone ? (
+              <div className="flex items-center gap-2 mt-3 text-xs text-green-400 bg-green-400/5 border border-green-400/15 rounded-lg px-3 py-2">
+                <CheckCircle size={12} />
+                Dados de demonstração já foram carregados. Opção bloqueada para proteger dados reais.
               </div>
+            ) : (
+              <Button variant="secondary" className="mt-4" onClick={() => setModalType('seed_confirm')}>
+                <Sparkles size={16} /> Carregar dados de demonstração
+              </Button>
             )}
-
-            <Button variant="secondary" className="mt-4" onClick={() => setModalType('seed_confirm')}>
-              <Sparkles size={16} /> Carregar dados de demonstração
-            </Button>
           </div>
         </div>
       </Card>
