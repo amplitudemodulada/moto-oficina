@@ -18,7 +18,13 @@ const DEFAULT_CONFIG: TelegramConfig = {
 export function getTelegramConfig(): TelegramConfig {
   try {
     const raw = localStorage.getItem(CONFIG_KEY)
-    return raw ? JSON.parse(raw) : DEFAULT_CONFIG
+    if (!raw) return DEFAULT_CONFIG
+    const stored = JSON.parse(raw) as TelegramConfig
+    return {
+      botToken: stored.botToken || DEFAULT_CONFIG.botToken,
+      chatId:   stored.chatId   || DEFAULT_CONFIG.chatId,
+      enabled:  stored.enabled  ?? DEFAULT_CONFIG.enabled,
+    }
   } catch {
     return DEFAULT_CONFIG
   }
@@ -40,11 +46,33 @@ export async function sendTelegram(text: string): Promise<'ok' | 'error'> {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: cfg.chatId, text, parse_mode: 'HTML' }),
+        signal: AbortSignal.timeout(8000),
       }
     )
     return res.ok ? 'ok' : 'error'
   } catch {
     return 'error'
+  }
+}
+
+export async function testTelegram(cfg: TelegramConfig, text: string): Promise<{ ok: boolean; desc: string }> {
+  if (!cfg.botToken || !cfg.chatId) return { ok: false, desc: 'Token ou Chat ID vazio.' }
+  try {
+    const res = await fetch(
+      `https://api.telegram.org/bot${cfg.botToken}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: cfg.chatId, text, parse_mode: 'HTML' }),
+        signal: AbortSignal.timeout(8000),
+      }
+    )
+    if (res.ok) return { ok: true, desc: 'Mensagem enviada com sucesso!' }
+    const json = await res.json().catch(() => ({}))
+    return { ok: false, desc: json?.description ?? `Erro HTTP ${res.status}` }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Sem resposta do servidor'
+    return { ok: false, desc: msg }
   }
 }
 

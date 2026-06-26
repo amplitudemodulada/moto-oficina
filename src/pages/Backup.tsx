@@ -7,7 +7,7 @@ import { storage } from '../utils/storage'
 import { seedDemoData, clearAllData, getAllDataForExport, restoreFromBackup } from '../utils/seed'
 import { getUsers, resetPasswordAdmin } from '../utils/auth'
 import type { StoredUser } from '../utils/auth'
-import { getTelegramConfig, saveTelegramConfig, sendTelegram, msgLogin } from '../utils/telegram'
+import { getTelegramConfig, saveTelegramConfig, sendTelegram, testTelegram, msgLogin } from '../utils/telegram'
 import type { TelegramConfig } from '../utils/telegram'
 import {
   Download, Upload, Database, CheckCircle,
@@ -56,14 +56,14 @@ export function Backup() {
   const [tgConfig,     setTgConfig]     = useState<TelegramConfig>(() => getTelegramConfig())
   const [tgSaving,     setTgSaving]     = useState(false)
   const [tgTesting,    setTgTesting]    = useState(false)
-  const [tgTestResult, setTgTestResult] = useState<'ok' | 'error' | null>(null)
+  const [tgTestResult, setTgTestResult] = useState<{ ok: boolean; desc: string } | null>(null)
   const [showToken,    setShowToken]    = useState(false)
 
   async function handleTgTest() {
     setTgTesting(true)
     setTgTestResult(null)
     saveTelegramConfig(tgConfig)
-    const r = await sendTelegram(msgLogin('teste', 'admin'))
+    const r = await testTelegram(tgConfig, msgLogin('teste', 'suporte'))
     setTgTestResult(r)
     setTgTesting(false)
   }
@@ -414,11 +414,12 @@ export function Backup() {
 
               {/* Test result */}
               {tgTestResult && (
-                <div className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${tgTestResult === 'ok' ? 'text-green-400 bg-green-400/10 border border-green-400/20' : 'text-red-400 bg-red-400/10 border border-red-400/20'}`}>
-                  {tgTestResult === 'ok'
-                    ? <><CheckCircle size={12} /> Mensagem enviada com sucesso!</>
-                    : <><AlertTriangle size={12} /> Falha ao enviar. Verifique o token e o Chat ID.</>
+                <div className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 ${tgTestResult.ok ? 'text-green-400 bg-green-400/10 border border-green-400/20' : 'text-red-400 bg-red-400/10 border border-red-400/20'}`}>
+                  {tgTestResult.ok
+                    ? <CheckCircle size={12} className="mt-0.5 shrink-0" />
+                    : <AlertTriangle size={12} className="mt-0.5 shrink-0" />
                   }
+                  <span>{tgTestResult.desc}</span>
                 </div>
               )}
 
