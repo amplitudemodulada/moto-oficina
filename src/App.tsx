@@ -44,10 +44,7 @@ function AppRoutes() {
         <Route path="/estoque"    element={<Estoque />} />
         <Route path="/checkout"   element={<Checkout />} />
         <Route path="/financeiro" element={<Financeiro />} />
-        <Route
-          path="/backup"
-          element={isAdmin ? <Backup /> : <Navigate to="/" replace />}
-        />
+        <Route path="/backup" element={<Backup />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

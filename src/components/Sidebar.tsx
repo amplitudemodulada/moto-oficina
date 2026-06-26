@@ -17,7 +17,7 @@ const NAV = [
   { to: '/estoque',    icon: Package,         label: 'Estoque',           adminOnly: false },
   { to: '/checkout',   icon: CreditCard,      label: 'Checkout',          adminOnly: false },
   { to: '/financeiro', icon: BarChart3,       label: 'Financeiro',        adminOnly: false },
-  { to: '/backup',     icon: HardDrive,       label: 'Backup & Restore',  adminOnly: true  },
+  { to: '/backup',     icon: HardDrive,       label: 'Backup & Restore',  adminOnly: false },
 ]
 
 const ROLE_CONFIG = {

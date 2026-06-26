@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useAuth } from '../context/AuthContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -42,6 +43,7 @@ const ROLE_INFO = {
 type ModalType = 'seed_confirm' | 'clear_confirm' | 'import_confirm' | 'success' | 'error' | 'reset_pw' | null
 
 export function Backup() {
+  const { role } = useAuth()
   const fileRef = useRef<HTMLInputElement>(null)
   const [modalType,     setModalType]     = useState<ModalType>(null)
   const [message,       setMessage]       = useState('')
@@ -362,8 +364,8 @@ export function Backup() {
         </div>
       </Card>
 
-      {/* Telegram notifications */}
-      <Card>
+      {/* Telegram notifications — suporte only */}
+      {role === 'suporte' && <Card>
         <div className="flex items-start gap-4">
           <div className="p-3 bg-blue-400/10 rounded-xl shrink-0">
             <BellRing size={22} className="text-blue-400" />
@@ -463,7 +465,7 @@ export function Backup() {
             </details>
           </div>
         </div>
-      </Card>
+      </Card>}
 
       {/* Danger zone */}
       <Card className="border-red-500/20">
