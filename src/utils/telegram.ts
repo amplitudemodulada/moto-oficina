@@ -19,12 +19,8 @@ export function getTelegramConfig(): TelegramConfig {
   try {
     const raw = localStorage.getItem(CONFIG_KEY)
     if (!raw) return DEFAULT_CONFIG
-    const stored = JSON.parse(raw) as TelegramConfig
-    return {
-      botToken: stored.botToken || DEFAULT_CONFIG.botToken,
-      chatId:   stored.chatId   || DEFAULT_CONFIG.chatId,
-      enabled:  stored.enabled  ?? DEFAULT_CONFIG.enabled,
-    }
+    // Usa exatamente o que o usuário salvou — sem sobrescrever com env vars
+    return JSON.parse(raw) as TelegramConfig
   } catch {
     return DEFAULT_CONFIG
   }
