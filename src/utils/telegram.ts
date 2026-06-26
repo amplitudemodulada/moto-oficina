@@ -6,14 +6,21 @@ export interface TelegramConfig {
   enabled:  boolean
 }
 
+// Credenciais padrão — usadas quando localStorage está vazio (ex: aba anônima)
+const DEFAULT_CONFIG: TelegramConfig = {
+  botToken: 'REMOVED',
+  chatId:   'REMOVED',
+  enabled:  true,
+}
+
 // ── Config persistence ────────────────────────────────────────────────────────
 
 export function getTelegramConfig(): TelegramConfig {
   try {
     const raw = localStorage.getItem(CONFIG_KEY)
-    return raw ? JSON.parse(raw) : { botToken: '', chatId: '', enabled: false }
+    return raw ? JSON.parse(raw) : DEFAULT_CONFIG
   } catch {
-    return { botToken: '', chatId: '', enabled: false }
+    return DEFAULT_CONFIG
   }
 }
 
@@ -61,7 +68,7 @@ const ROLE_EMOJI: Record<string, string> = { admin: '🔐', suporte: '🎧' }
 export function msgLogin(username: string, role: string): string {
   const { date, time } = now()
   return (
-    `🏍️ <b>MotoGest</b>\n` +
+    `🏍️ <b>Moto Pro</b>\n` +
     `─────────────────\n` +
     `${ROLE_EMOJI[role] ?? '👤'} <b>Login realizado</b>\n\n` +
     `👤 Usuário: <code>${username}</code>\n` +
@@ -73,7 +80,7 @@ export function msgLogin(username: string, role: string): string {
 export function msgLogout(username: string, role: string, loginAt: string): string {
   const { date, time } = now()
   return (
-    `🏍️ <b>MotoGest</b>\n` +
+    `🏍️ <b>Moto Pro</b>\n` +
     `─────────────────\n` +
     `🚪 <b>Logout realizado</b>\n\n` +
     `👤 Usuário: <code>${username}</code>\n` +

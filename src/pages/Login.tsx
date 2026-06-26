@@ -38,7 +38,7 @@ export function Login() {
         <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/20 mb-4">
           <Wrench size={30} className="text-white" />
         </div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">MotoGest</h1>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Moto Pro</h1>
         <p className="text-gray-500 text-sm mt-1">Gestão de Oficina de Motos</p>
       </div>
 

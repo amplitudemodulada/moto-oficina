@@ -249,7 +249,7 @@ export function Checkout() {
             {/* Recibo */}
             <div id="recibo" className="bg-gray-800 rounded-xl p-5 space-y-3 text-sm print:bg-white print:text-black">
               <div className="text-center border-b border-gray-700 pb-3 print:border-gray-300">
-                <p className="font-bold text-white print:text-black text-base">🏍️ MotoGest Oficina</p>
+                <p className="font-bold text-white print:text-black text-base">🏍️ Moto Pro Oficina</p>
                 <p className="text-xs text-gray-500 print:text-gray-700">RECIBO DE SERVIÇO</p>
                 <p className="text-xs text-gray-500 print:text-gray-700">O.S. Nº {finalizadaOS.numero}</p>
               </div>

@@ -129,7 +129,7 @@ export function Sidebar() {
               <Wrench size={20} className="text-white" />
             </div>
             <div>
-              <p className="font-bold text-white text-sm leading-tight">MotoGest</p>
+              <p className="font-bold text-white text-sm leading-tight">Moto Pro</p>
               <p className="text-xs text-gray-500">Gestão de Oficina</p>
             </div>
           </div>

@@ -95,7 +95,7 @@ export function Welcome() {
           <div className="w-20 h-20 bg-orange-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-orange-500/25">
             <Wrench size={36} className="text-white" />
           </div>
-          <p className="text-gray-500 text-sm font-medium tracking-widest uppercase">MotoGest</p>
+          <p className="text-gray-500 text-sm font-medium tracking-widest uppercase">Moto Pro</p>
         </div>
 
         {/* Greeting */}
