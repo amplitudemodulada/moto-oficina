@@ -4,13 +4,13 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { storage } from '../utils/storage'
-import { seedDemoData, clearAllData, getAllDataForExport, restoreFromBackup, hasSeedData } from '../utils/seed'
+import { seedDemoData, clearAllData, getAllDataForExport, restoreFromBackup } from '../utils/seed'
 import { getUsers, resetPasswordAdmin } from '../utils/auth'
 import type { StoredUser } from '../utils/auth'
 import { getTelegramConfig, saveTelegramConfig, sendTelegram, msgLogin } from '../utils/telegram'
 import type { TelegramConfig } from '../utils/telegram'
 import {
-  Download, Upload, Trash2, Database, CheckCircle,
+  Download, Upload, Database, CheckCircle,
   AlertTriangle, Users, Bike, ClipboardList, Package,
   TrendingDown, HardDrive, RefreshCw, Info, Sparkles,
   ShieldCheck, Headset, KeyRound, Eye, EyeOff,
@@ -41,7 +41,7 @@ const ROLE_INFO = {
   suporte: { label: 'Suporte',       icon: Headset,     color: 'text-blue-400',   bg: 'bg-blue-400/10'   },
 }
 
-type ModalType = 'seed_confirm' | 'clear_confirm' | 'import_confirm' | 'success' | 'error' | 'reset_pw' | null
+type ModalType = 'seed_confirm' | 'import_confirm' | 'success' | 'error' | 'reset_pw' | null
 
 export function Backup() {
   const { role } = useAuth()
@@ -150,15 +150,6 @@ export function Backup() {
     clearAllData()
     seedDemoData()
     localStorage.setItem(SEED_KEY, '1')
-    setModalType(null)
-    window.location.reload()
-  }
-
-  // ── Clear ─────────────────────────────────────────────────────────────────
-  function confirmClear() {
-    clearAllData()
-    localStorage.removeItem(SEED_KEY)
-    setSeedDone(false)
     setModalType(null)
     window.location.reload()
   }
@@ -472,24 +463,6 @@ export function Backup() {
         </div>
       </Card>}
 
-      {/* Danger zone */}
-      <Card className="border-red-500/20">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-red-400/10 rounded-xl shrink-0">
-            <Trash2 size={22} className="text-red-400" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-red-400">Zona de Perigo</h3>
-            <p className="text-sm text-gray-400 mt-1">
-              Remove <span className="text-red-400 font-medium">permanentemente</span> todos os dados do sistema.
-              Esta ação não pode ser desfeita.
-            </p>
-            <Button variant="danger" className="mt-4" onClick={() => setModalType('clear_confirm')} disabled={!hasData}>
-              <Trash2 size={16} /> Apagar todos os dados
-            </Button>
-          </div>
-        </div>
-      </Card>
 
       {/* ── Modals ── */}
 
@@ -546,32 +519,6 @@ export function Backup() {
             <Button variant="secondary" className="flex-1" onClick={() => setModalType(null)}>Cancelar</Button>
             <Button className="flex-1" onClick={confirmImport}>
               <RefreshCw size={16} /> Restaurar agora
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Clear confirm */}
-      <Modal isOpen={modalType === 'clear_confirm'} onClose={() => setModalType(null)} title="Apagar Todos os Dados">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-red-400/5 border border-red-400/20 rounded-xl">
-            <Trash2 size={20} className="text-red-400 shrink-0" />
-            <div>
-              <p className="text-sm text-red-300 font-medium">Atenção: ação irreversível</p>
-              <p className="text-xs text-red-400/70 mt-1">Todos os dados serão apagados permanentemente.</p>
-            </div>
-          </div>
-          <p className="text-sm text-gray-400">
-            Serão removidos <span className="text-white font-medium">{stats.clientes} clientes</span>,{' '}
-            <span className="text-white font-medium">{stats.motos} motos</span>,{' '}
-            <span className="text-white font-medium">{stats.ordens} ordens</span>,{' '}
-            <span className="text-white font-medium">{stats.produtos} produtos</span> e{' '}
-            <span className="text-white font-medium">{stats.despesas} despesas</span>.
-          </p>
-          <div className="flex gap-3">
-            <Button variant="secondary" className="flex-1" onClick={() => setModalType(null)}>Cancelar</Button>
-            <Button variant="danger" className="flex-1" onClick={confirmClear}>
-              <Trash2 size={16} /> Apagar tudo
             </Button>
           </div>
         </div>
