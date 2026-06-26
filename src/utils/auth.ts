@@ -52,8 +52,8 @@ function saveUsers(users: StoredUser[]): void {
 export async function initDefaultUsers(): Promise<void> {
   if (getUsers().length > 0) return
   const [adminHash, suporteHash] = await Promise.all([
-    hashPassword('admin123'),
-    hashPassword('suporte123'),
+    hashPassword('admin@2026!'),
+    hashPassword('suporte@2026!'),
   ])
   saveUsers([
     { username: 'admin',   role: 'admin',   displayName: 'Administrador', passwordHash: adminHash   },

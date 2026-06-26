@@ -1,13 +1,8 @@
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Wrench, Eye, EyeOff, LogIn, Lock, User, ShieldCheck, Headset } from 'lucide-react'
+import { Wrench, Eye, EyeOff, LogIn, Lock, User } from 'lucide-react'
 import { Button } from '../components/ui/Button'
-
-const HINTS = [
-  { username: 'admin',   password: 'admin123',   label: 'Administrador', icon: ShieldCheck, color: 'text-orange-400', bg: 'bg-orange-400/10 border-orange-400/20' },
-  { username: 'suporte', password: 'suporte123', label: 'Suporte',       icon: Headset,     color: 'text-blue-400',   bg: 'bg-blue-400/10 border-blue-400/20'   },
-]
 
 export function Login() {
   const { login } = useAuth()
@@ -33,12 +28,6 @@ export function Login() {
       setPassword('')
       setLoading(false)
     }
-  }
-
-  function fillHint(h: typeof HINTS[0]) {
-    setUsername(h.username)
-    setPassword(h.password)
-    setError('')
   }
 
   return (
@@ -119,35 +108,6 @@ export function Login() {
           </Button>
         </form>
 
-        {/* Quick access hints */}
-        <div className="px-6 pb-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-px bg-gray-800" />
-            <span className="text-xs text-gray-600">acesso rápido (demo)</span>
-            <div className="flex-1 h-px bg-gray-800" />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {HINTS.map(h => (
-              <button
-                key={h.username}
-                type="button"
-                onClick={() => fillHint(h)}
-                className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all hover:scale-[1.02] active:scale-100 ${h.bg} ${username === h.username ? 'ring-1 ring-orange-500/50' : ''}`}
-              >
-                <div className={`p-1.5 rounded-lg bg-gray-900/50`}>
-                  <h.icon size={14} className={h.color} />
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-semibold text-gray-200">{h.username}</p>
-                  <p className="text-[10px] text-gray-500">{h.label}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-          <p className="text-center text-[10px] text-gray-700">
-            Clique para preencher · Altere as senhas após o primeiro acesso
-          </p>
-        </div>
       </div>
     </div>
   )
