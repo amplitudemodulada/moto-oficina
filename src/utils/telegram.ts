@@ -6,10 +6,10 @@ export interface TelegramConfig {
   enabled:  boolean
 }
 
-// Credenciais padrão — usadas quando localStorage está vazio (ex: aba anônima)
+// Credenciais padrão vindas das variáveis de ambiente (não expostas no código)
 const DEFAULT_CONFIG: TelegramConfig = {
-  botToken: 'REMOVED',
-  chatId:   'REMOVED',
+  botToken: import.meta.env.VITE_TELEGRAM_BOT_TOKEN ?? '',
+  chatId:   import.meta.env.VITE_TELEGRAM_CHAT_ID   ?? '',
   enabled:  true,
 }
 
