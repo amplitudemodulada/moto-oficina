@@ -15,9 +15,11 @@ export interface Session {
   loginAt: string
 }
 
-const USERS_KEY   = 'motogest_users'
-const SESSION_KEY = 'motogest_session'
-const SALT        = 'motogest@2025#oficina'
+const USERS_KEY    = 'motogest_users'
+const SESSION_KEY  = 'motogest_session'
+const USERS_VER    = 'motogest_users_ver'
+const SALT         = 'motogest@2025#oficina'
+const CURRENT_VER  = '2'
 
 // ── Crypto helpers ────────────────────────────────────────────────────────────
 
@@ -50,15 +52,25 @@ function saveUsers(users: StoredUser[]): void {
 }
 
 export async function initDefaultUsers(): Promise<void> {
-  if (getUsers().length > 0) return
+  if (localStorage.getItem(USERS_VER) === CURRENT_VER) return
   const [adminHash, suporteHash] = await Promise.all([
     hashPassword('admin@2026!'),
     hashPassword('suporte@2026!'),
   ])
-  saveUsers([
-    { username: 'admin',   role: 'admin',   displayName: 'Administrador', passwordHash: adminHash   },
-    { username: 'suporte', role: 'suporte', displayName: 'Suporte',       passwordHash: suporteHash },
-  ])
+  const existing = getUsers()
+  if (existing.length === 0) {
+    saveUsers([
+      { username: 'admin',   role: 'admin',   displayName: 'Administrador', passwordHash: adminHash   },
+      { username: 'suporte', role: 'suporte', displayName: 'Suporte',       passwordHash: suporteHash },
+    ])
+  } else {
+    saveUsers(existing.map(u => {
+      if (u.username === 'admin')   return { ...u, passwordHash: adminHash }
+      if (u.username === 'suporte') return { ...u, passwordHash: suporteHash }
+      return u
+    }))
+  }
+  localStorage.setItem(USERS_VER, CURRENT_VER)
 }
 
 export type ChangePasswordResult = 'ok' | 'wrong_current' | 'not_found'
