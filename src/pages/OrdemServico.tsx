@@ -8,7 +8,7 @@ import { Modal } from '../components/ui/Modal'
 import { StatusBadge } from '../components/ui/Badge'
 import {
   ClipboardList, Plus, Search, Trash2, Edit2, ChevronRight,
-  Bike, Package, Wrench, ArrowRight, X, DollarSign, Truck
+  Bike, Package, Wrench, ArrowRight, X, DollarSign, Truck, MessageCircle
 } from 'lucide-react'
 import type { OrdemServico, OSStatus, ItemOS } from '../types'
 
@@ -148,6 +148,35 @@ export function OrdemServico() {
   }
 
   const viewingTotal = viewing ? viewing.itens.reduce((s, i) => s + i.valorUnitario * i.quantidade, 0) + viewing.valorMaoDeObra : 0
+
+  function sendWhatsApp(os: typeof viewing) {
+    if (!os) return
+    const moto    = getMotoById(os.motoId)
+    const cliente = getClienteById(os.clienteId)
+    const total   = os.itens.reduce((s, i) => s + i.valorUnitario * i.quantidade, 0) + os.valorMaoDeObra
+    const phone   = (cliente?.telefone ?? '').replace(/\D/g, '')
+    const itensTexto = os.itens.length
+      ? os.itens.map(i => `  • ${i.nome} x${i.quantidade} — ${fmt(i.quantidade * i.valorUnitario)}`).join('\n')
+      : '  (sem peças registradas)'
+    const msg = [
+      `🏍️ *Moto Pro Oficina*`,
+      `O.S. #${os.numero} — ${STATUS_LABELS[os.status]}`,
+      ``,
+      `*Veículo:* ${moto?.marca ?? ''} ${moto?.modelo ?? ''} — ${moto?.placa ?? ''}`,
+      `*Problema:* ${os.descricaoProblema}`,
+      ``,
+      `*Peças/Serviços:*`,
+      itensTexto,
+      `*Mão de obra:* ${fmt(os.valorMaoDeObra)}`,
+      `*Total: ${fmt(total)}*`,
+      ``,
+      os.status === 'pronta_entrega'
+        ? `✅ Sua moto está *pronta para retirada*! Entre em contato para combinar a entrega.`
+        : `🔧 Acompanhe o andamento: ${STATUS_LABELS[os.status]}`,
+    ].join('\n')
+    const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
+    window.open(url, '_blank')
+  }
 
   return (
     <div className="space-y-6">
@@ -380,6 +409,16 @@ export function OrdemServico() {
                 <span className="text-xl font-bold text-orange-400">{fmt(viewingTotal)}</span>
               </div>
             </div>
+
+            <Button
+              variant="secondary"
+              className="w-full gap-2"
+              onClick={() => sendWhatsApp(viewing)}
+              disabled={!getClienteById(viewing.clienteId)?.telefone}
+            >
+              <MessageCircle size={16} className="text-green-400" />
+              Enviar por WhatsApp
+            </Button>
 
             {viewing.status === 'pronta_entrega' && (
               <Button className="w-full bg-green-600 hover:bg-green-500 border-0"

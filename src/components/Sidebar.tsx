@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, ClipboardList, Package, CreditCard,
   Wrench, Menu, X, BarChart3, HardDrive, LogOut, ShieldCheck,
   Headset, KeyRound, Eye, EyeOff, CheckCircle, AlertTriangle,
-  Sun, Moon, BookOpen,
+  Sun, Moon, BookOpen, Download,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
@@ -31,17 +31,35 @@ const ROLE_CONFIG = {
 interface PwForm { current: string; next: string; confirm: string }
 const emptyPw = (): PwForm => ({ current: '', next: '', confirm: '' })
 
+const BACKUP_KEY = 'motogest_last_backup'
+
+function fmtBackupDate(iso: string) {
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
 export function Sidebar() {
-  const [open,    setOpen]    = useState(false)
-  const [pwModal, setPwModal] = useState(false)
-  const [form,    setForm]    = useState<PwForm>(emptyPw())
-  const [shows,   setShows]   = useState({ current: false, next: false, confirm: false })
-  const [error,   setError]   = useState('')
-  const [success, setSuccess] = useState(false)
-  const [saving,  setSaving]  = useState(false)
+  const [open,         setOpen]         = useState(false)
+  const [pwModal,      setPwModal]      = useState(false)
+  const [logoutModal,  setLogoutModal]  = useState(false)
+  const [form,         setForm]         = useState<PwForm>(emptyPw())
+  const [shows,        setShows]        = useState({ current: false, next: false, confirm: false })
+  const [error,        setError]        = useState('')
+  const [success,      setSuccess]      = useState(false)
+  const [saving,       setSaving]       = useState(false)
+
+  const lastBackup = localStorage.getItem(BACKUP_KEY)
 
   const { session, isAdmin, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
+
+  function handleLogoutClick() {
+    setLogoutModal(true)
+  }
+
+  function confirmLogout() {
+    setLogoutModal(false)
+    logout()
+  }
   const visibleNav = NAV.filter(item => !item.adminOnly || isAdmin)
   const roleInfo   = session ? ROLE_CONFIG[session.role] : null
 
@@ -202,7 +220,7 @@ export function Sidebar() {
 
             {/* Logout */}
             <button
-              onClick={logout}
+              onClick={handleLogoutClick}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
             >
               <LogOut size={15} />
@@ -269,6 +287,45 @@ export function Sidebar() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Logout confirmation + backup reminder */}
+      <Modal isOpen={logoutModal} onClose={() => setLogoutModal(false)} title="Sair do sistema" size="sm">
+        <div className="space-y-4">
+          {lastBackup ? (
+            <div className="flex items-start gap-3 p-3 bg-green-400/5 border border-green-400/15 rounded-xl">
+              <CheckCircle size={16} className="text-green-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-gray-300 font-medium">Backup realizado</p>
+                <p className="text-xs text-gray-500 mt-0.5">Último: {fmtBackupDate(lastBackup)}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3 p-3 bg-yellow-400/5 border border-yellow-400/15 rounded-xl">
+              <AlertTriangle size={16} className="text-yellow-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-yellow-300 font-medium">Nenhum backup registrado</p>
+                <p className="text-xs text-yellow-400/70 mt-0.5">
+                  Recomendamos exportar um backup antes de sair para não perder dados.
+                </p>
+              </div>
+            </div>
+          )}
+          <p className="text-sm text-gray-400">Deseja realmente encerrar a sessão?</p>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" className="flex-1" onClick={() => setLogoutModal(false)}>
+              Cancelar
+            </Button>
+            {!lastBackup && (
+              <Button variant="secondary" size="sm" className="flex-1" onClick={() => { setLogoutModal(false); window.location.href = '/backup' }}>
+                <Download size={14} /> Fazer backup
+              </Button>
+            )}
+            <Button variant="danger" size="sm" className="flex-1" onClick={confirmLogout}>
+              <LogOut size={14} /> Sair
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   )
