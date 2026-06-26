@@ -3,9 +3,11 @@ import {
   LayoutDashboard, Users, ClipboardList, Package, CreditCard,
   Wrench, Menu, X, BarChart3, HardDrive, LogOut, ShieldCheck,
   Headset, KeyRound, Eye, EyeOff, CheckCircle, AlertTriangle,
+  Sun, Moon,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { changePasswordSelf } from '../utils/auth'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/Button'
@@ -38,6 +40,7 @@ export function Sidebar() {
   const [saving,  setSaving]  = useState(false)
 
   const { session, isAdmin, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const visibleNav = NAV.filter(item => !item.adminOnly || isAdmin)
   const roleInfo   = session ? ROLE_CONFIG[session.role] : null
 
@@ -177,6 +180,15 @@ export function Sidebar() {
                 <p className={`text-[10px] ${roleInfo.color}`}>{roleInfo.label}</p>
               </div>
             </div>
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              {theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+            </button>
 
             {/* Change password */}
             <button

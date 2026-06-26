@@ -30,6 +30,68 @@
   }
 }
 
+/* ── Light Mode ──────────────────────────────────────────────────────────── */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+html:not(.dark) ::-webkit-scrollbar-track        { background-color: #f1f5f9; }
+html:not(.dark) ::-webkit-scrollbar-thumb        { background-color: #cbd5e1; }
+html:not(.dark) ::-webkit-scrollbar-thumb:hover  { background-color: #94a3b8; }
+
+/* Backgrounds */
+html:not(.dark) .bg-gray-950 { background-color: #f1f5f9; }
+html:not(.dark) .bg-gray-900 { background-color: #ffffff; }
+html:not(.dark) .bg-gray-800 { background-color: #f1f5f9; }
+html:not(.dark) .bg-gray-700 { background-color: #e2e8f0; }
+
+/* Backgrounds with opacity */
+html:not(.dark) .bg-gray-900\/50 { background-color: rgba(255, 255, 255, 0.5); }
+html:not(.dark) .bg-gray-800\/50 { background-color: rgba(241, 245, 249, 0.5); }
+html:not(.dark) .bg-gray-800\/60 { background-color: rgba(241, 245, 249, 0.6); }
+
+/* Text */
+html:not(.dark) .text-white    { color: #0f172a; }
+html:not(.dark) .text-gray-100 { color: #1e293b; }
+html:not(.dark) .text-gray-200 { color: #334155; }
+html:not(.dark) .text-gray-300 { color: #475569; }
+html:not(.dark) .text-gray-400 { color: #64748b; }
+html:not(.dark) .text-gray-500 { color: #94a3b8; }
+html:not(.dark) .text-gray-600 { color: #94a3b8; }
+html:not(.dark) .text-gray-700 { color: #94a3b8; }
+
+/* Borders */
+html:not(.dark) .border-gray-800 { border-color: #e2e8f0; }
+html:not(.dark) .border-gray-700 { border-color: #cbd5e1; }
+
+/* Hover states */
+html:not(.dark) .hover\:bg-gray-800:hover   { background-color: #e2e8f0; }
+html:not(.dark) .hover\:text-white:hover    { color: #0f172a; }
+html:not(.dark) .hover\:text-gray-300:hover { color: #475569; }
+
+/* Placeholders */
+html:not(.dark) .placeholder-gray-600::placeholder { color: #94a3b8; }
+
+/* Inputs, textareas, selects */
+html:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html:not(.dark) textarea,
+html:not(.dark) select {
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder { color: #94a3b8; }
+
+/* Modal backdrop */
+html:not(.dark) .bg-black\/60 { background-color: rgba(15, 23, 42, 0.35); }
+
 @media print {
   body {
     background: white;
