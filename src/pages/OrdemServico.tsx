@@ -175,7 +175,13 @@ export function OrdemServico() {
         : `🔧 Acompanhe o andamento: ${STATUS_LABELS[os.status]}`,
     ].join('\n')
     const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
-    window.open(url, '_blank')
+    const a = document.createElement('a')
+    a.href = url
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   }
 
   return (
