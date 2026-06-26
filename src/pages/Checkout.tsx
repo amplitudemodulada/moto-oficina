@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -27,6 +28,7 @@ function calcTotal(os: OrdemServico) {
 }
 
 export function Checkout() {
+  const location = useLocation()
   const { ordens, updateOrdem, updateStatus, getMotoById, getClienteById } = useApp()
 
   const [search, setSearch] = useState('')
@@ -35,6 +37,14 @@ export function Checkout() {
   const [reciboModal, setReciboModal] = useState(false)
   const [finalizadaOS, setFinalizadaOS] = useState<OrdemServico | null>(null)
   const [confirming, setConfirming] = useState(false)
+
+  useEffect(() => {
+    const osId = (location.state as { osId?: string } | null)?.osId
+    if (osId) {
+      const os = ordens.find(o => o.id === osId && o.status === 'pronta_entrega')
+      if (os) setSelectedOS(os)
+    }
+  }, [])
 
   const prontas = ordens
     .filter(o => o.status === 'pronta_entrega')

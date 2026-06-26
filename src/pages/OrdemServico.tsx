@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -7,7 +8,7 @@ import { Modal } from '../components/ui/Modal'
 import { StatusBadge } from '../components/ui/Badge'
 import {
   ClipboardList, Plus, Search, Trash2, Edit2, ChevronRight,
-  Bike, Package, Wrench, ArrowRight, X, DollarSign
+  Bike, Package, Wrench, ArrowRight, X, DollarSign, Truck
 } from 'lucide-react'
 import type { OrdemServico, OSStatus, ItemOS } from '../types'
 
@@ -37,6 +38,7 @@ interface OSFormData {
 }
 
 export function OrdemServico() {
+  const navigate = useNavigate()
   const { ordens, motos, clientes, produtos, addOrdem, updateOrdem, deleteOrdem, updateStatus, getMotoById, getClienteById } = useApp()
 
   const [search, setSearch] = useState('')
@@ -215,6 +217,12 @@ export function OrdemServico() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    {os.status === 'pronta_entrega' && (
+                      <Button size="sm" onClick={() => navigate('/checkout', { state: { osId: os.id } })}
+                        className="gap-1.5 bg-green-600 hover:bg-green-500 text-white border-0">
+                        <Truck size={14} /> Entregar
+                      </Button>
+                    )}
                     {canAdvance && (
                       <Button size="sm" variant="ghost" onClick={() => nextStatus(os)} title="Avançar status">
                         <ArrowRight size={15} />
@@ -373,6 +381,12 @@ export function OrdemServico() {
               </div>
             </div>
 
+            {viewing.status === 'pronta_entrega' && (
+              <Button className="w-full bg-green-600 hover:bg-green-500 border-0"
+                onClick={() => { setDetailModal(false); navigate('/checkout', { state: { osId: viewing.id } }) }}>
+                <Truck size={16} /> Entregar / Pagamento
+              </Button>
+            )}
             {viewing.status !== 'finalizada' && viewing.status !== 'pronta_entrega' && (
               <Button className="w-full" onClick={() => { nextStatus(viewing); setDetailModal(false) }}>
                 <ArrowRight size={16} /> Avançar Status
