@@ -80,6 +80,21 @@ export interface Despesa {
   createdAt: string
 }
 
+export type ReceitaCategoria =
+  | 'Serviços'
+  | 'Venda de Peças'
+  | 'Consultoria'
+  | 'Outros'
+
+export interface Receita {
+  id: string
+  descricao: string
+  valor: number
+  categoria: ReceitaCategoria
+  data: string
+  createdAt: string
+}
+
 export interface VendaRapida {
   id: string
   itens: ItemOS[]

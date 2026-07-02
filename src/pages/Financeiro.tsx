@@ -9,10 +9,14 @@ import {
   Trash2, Edit2, ArrowUpRight, ArrowDownLeft, Receipt,
   CalendarDays, BarChart3, Filter
 } from 'lucide-react'
-import type { Despesa, DespesaCategoria, VendaRapida } from '../types'
+import type { Despesa, DespesaCategoria, Receita, ReceitaCategoria, VendaRapida } from '../types'
 
 const CATEGORIAS: DespesaCategoria[] = [
   'Aluguel', 'Ferramentas', 'Peças/Insumos', 'Salários', 'Impostos', 'Utilidades', 'Marketing', 'Outros'
+]
+
+const RECEITA_CATEGORIAS: ReceitaCategoria[] = [
+  'Serviços', 'Venda de Peças', 'Consultoria', 'Outros'
 ]
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -89,16 +93,26 @@ function MiniBarChart({ data }: { data: { label: string; entradas: number; saida
 }
 
 export function Financeiro() {
-  const { ordens, despesas, vendasRapidas, addDespesa, updateDespesa, deleteDespesa, getClienteById, getMotoById } = useApp()
+  const { ordens, despesas, receitas, vendasRapidas, addDespesa, updateDespesa, deleteDespesa, addReceita, updateReceita, deleteReceita, getClienteById, getMotoById } = useApp()
 
   const [periodo, setPeriodo] = useState<Periodo>('mes')
-  const [modal, setModal] = useState(false)
-  const [editing, setEditing] = useState<Despesa | null>(null)
-  const [form, setForm] = useState<DespesaForm>(emptyForm())
-  const [errors, setErrors] = useState<Partial<DespesaForm>>({})
   const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'entradas' | 'saidas'>('todos')
 
-  // Entradas = O.S. finalizadas + vendas rápidas no período
+  // Despesa modal
+  const [despModal, setDespModal] = useState(false)
+  const [editingDesp, setEditingDesp] = useState<Despesa | null>(null)
+  const [despForm, setDespForm] = useState<DespesaForm>(emptyForm())
+  const [despErrors, setDespErrors] = useState<Partial<DespesaForm>>({})
+
+  // Receita modal
+  const [recModal, setRecModal] = useState(false)
+  const [editingRec, setEditingRec] = useState<Receita | null>(null)
+  const [recForm, setRecForm] = useState<{ descricao: string; valor: string; categoria: ReceitaCategoria; data: string }>({
+    descricao: '', valor: '', categoria: 'Outros', data: new Date().toISOString().slice(0, 10)
+  })
+  const [recErrors, setRecErrors] = useState<Partial<Record<string, string>>>({})
+
+  // Entradas = O.S. finalizadas + vendas rápidas + receitas manuais no período
   const entradas = useMemo(() => {
     const fromOS = ordens
       .filter(o => o.status === 'finalizada' && o.finalizadaEm && inPeriod(o.finalizadaEm, periodo))
@@ -109,6 +123,7 @@ export function Financeiro() {
         valor: o.itens.reduce((s, i) => s + i.valorUnitario * i.quantidade, 0) + o.valorMaoDeObra,
         data: o.finalizadaEm!,
         extra: o.formaPagamento ? PAYMENT_LABELS[o.formaPagamento] : '',
+        raw: null as Despesa | Receita | null,
       }))
     const fromVendas = vendasRapidas
       .filter(v => inPeriod(v.createdAt, periodo))
@@ -119,9 +134,21 @@ export function Financeiro() {
         valor: v.total,
         data: v.createdAt,
         extra: v.formaPagamento ? PAYMENT_LABELS[v.formaPagamento] : '',
+        raw: null as Despesa | Receita | null,
       }))
-    return [...fromOS, ...fromVendas]
-  }, [ordens, vendasRapidas, periodo, getMotoById, getClienteById]
+    const fromReceitas = receitas
+      .filter(r => inPeriod(r.data, periodo))
+      .map(r => ({
+        id: r.id,
+        tipo: 'entrada' as const,
+        descricao: r.descricao,
+        valor: r.valor,
+        data: r.data,
+        extra: r.categoria,
+        raw: r as Receita,
+      }))
+    return [...fromOS, ...fromVendas, ...fromReceitas]
+  }, [ordens, vendasRapidas, receitas, periodo, getMotoById, getClienteById]
   )
 
   const saidas = useMemo(() =>
@@ -161,6 +188,9 @@ export function Financeiro() {
     function vendasNoPeriodo(fn: (v: VendaRapida) => boolean): number {
       return vendasRapidas.filter(fn).reduce((s, v) => s + v.total, 0)
     }
+    function receitasNoPeriodo(fn: (r: Receita) => boolean): number {
+      return receitas.filter(fn).reduce((s, r) => s + r.valor, 0)
+    }
     if (periodo === 'hoje') {
       return Array.from({ length: 8 }, (_, i) => {
         const h = i * 3
@@ -173,10 +203,14 @@ export function Financeiro() {
           const d = new Date(v.createdAt)
           return d.toDateString() === hojeStr && d.getHours() >= h && d.getHours() < h + 3
         })
+        const r = receitasNoPeriodo(r => {
+          const d = new Date(r.data)
+          return d.toDateString() === hojeStr && d.getHours() >= h && d.getHours() < h + 3
+        })
         const sai = despesas
           .filter(d => { const dd = new Date(d.data); return dd.toDateString() === hojeStr })
           .reduce((s, d) => s + d.valor, 0)
-        return { label, entradas: ent + v, saidas: i === 0 ? sai : 0 }
+        return { label, entradas: ent + v + r, saidas: i === 0 ? sai : 0 }
       })
     }
     return Array.from({ length: 6 }, (_, i) => {
@@ -191,12 +225,16 @@ export function Financeiro() {
         const dd = new Date(v.createdAt)
         return dd.getMonth() === m && dd.getFullYear() === y
       })
+      const r = receitasNoPeriodo(r => {
+        const dd = new Date(r.data)
+        return dd.getMonth() === m && dd.getFullYear() === y
+      })
       const sai = despesas
         .filter(d => { const dd = new Date(d.data); return dd.getMonth() === m && dd.getFullYear() === y })
         .reduce((s, d) => s + d.valor, 0)
-      return { label, entradas: ent + v, saidas: sai }
+      return { label, entradas: ent + v + r, saidas: sai }
     })
-  }, [ordens, vendasRapidas, despesas, periodo])
+  }, [ordens, vendasRapidas, receitas, despesas, periodo])
 
   // By payment method
   const porPagamento = useMemo(() => {
@@ -226,30 +264,60 @@ export function Financeiro() {
     return Object.entries(map).sort((a, b) => b[1] - a[1])
   }, [despesas, periodo])
 
-  function openNew() {
-    setEditing(null); setForm(emptyForm()); setErrors({}); setModal(true)
+  // ── Despesa ──
+  function openNewDesp() {
+    setEditingDesp(null); setDespForm(emptyForm()); setDespErrors({}); setDespModal(true)
   }
 
-  function openEdit(d: Despesa) {
-    setEditing(d)
-    setForm({ descricao: d.descricao, valor: String(d.valor), categoria: d.categoria, data: d.data.slice(0, 10) })
-    setErrors({}); setModal(true)
+  function openEditDesp(d: Despesa) {
+    setEditingDesp(d)
+    setDespForm({ descricao: d.descricao, valor: String(d.valor), categoria: d.categoria, data: d.data.slice(0, 10) })
+    setDespErrors({}); setDespModal(true)
   }
 
-  function validate(): boolean {
+  function validateDesp(): boolean {
     const errs: Partial<DespesaForm> = {}
-    if (!form.descricao.trim()) errs.descricao = 'Descrição obrigatória'
-    if (!form.valor || isNaN(parseFloat(form.valor)) || parseFloat(form.valor) <= 0) errs.valor = 'Valor inválido'
-    if (!form.data) errs.data = 'Data obrigatória'
-    setErrors(errs)
+    if (!despForm.descricao.trim()) errs.descricao = 'Descrição obrigatória'
+    if (!despForm.valor || isNaN(parseFloat(despForm.valor)) || parseFloat(despForm.valor) <= 0) errs.valor = 'Valor inválido'
+    if (!despForm.data) errs.data = 'Data obrigatória'
+    setDespErrors(errs)
     return Object.keys(errs).length === 0
   }
 
-  function save() {
-    if (!validate()) return
-    const data = { descricao: form.descricao.trim(), valor: parseFloat(form.valor), categoria: form.categoria, data: form.data }
-    if (editing) { updateDespesa(editing.id, data) } else { addDespesa(data) }
-    setModal(false)
+  function saveDesp() {
+    if (!validateDesp()) return
+    const data = { descricao: despForm.descricao.trim(), valor: parseFloat(despForm.valor), categoria: despForm.categoria, data: despForm.data }
+    if (editingDesp) { updateDespesa(editingDesp.id, data) } else { addDespesa(data) }
+    setDespModal(false)
+  }
+
+  // ── Receita ──
+  function openNewRec() {
+    setEditingRec(null)
+    setRecForm({ descricao: '', valor: '', categoria: 'Outros', data: new Date().toISOString().slice(0, 10) })
+    setRecErrors({}); setRecModal(true)
+  }
+
+  function openEditRec(r: Receita) {
+    setEditingRec(r)
+    setRecForm({ descricao: r.descricao, valor: String(r.valor), categoria: r.categoria, data: r.data.slice(0, 10) })
+    setRecErrors({}); setRecModal(true)
+  }
+
+  function validateRec(): boolean {
+    const errs: Record<string, string> = {}
+    if (!recForm.descricao.trim()) errs.descricao = 'Descrição obrigatória'
+    if (!recForm.valor || isNaN(parseFloat(recForm.valor)) || parseFloat(recForm.valor) <= 0) errs.valor = 'Valor inválido'
+    if (!recForm.data) errs.data = 'Data obrigatória'
+    setRecErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  function saveRec() {
+    if (!validateRec()) return
+    const data = { descricao: recForm.descricao.trim(), valor: parseFloat(recForm.valor), categoria: recForm.categoria, data: recForm.data }
+    if (editingRec) { updateReceita(editingRec.id, data) } else { addReceita(data) }
+    setRecModal(false)
   }
 
   const saldoPositivo = saldo >= 0
@@ -262,27 +330,30 @@ export function Financeiro() {
           <h1 className="text-2xl font-bold text-white">Financeiro</h1>
           <p className="text-gray-400 text-sm mt-1">Entradas, saídas e saldo da oficina</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Period selector */}
-          <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
-            {PERIODOS.map(p => (
-              <button
-                key={p.value}
-                onClick={() => setPeriodo(p.value)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  periodo === p.value
-                    ? 'bg-orange-500 text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            {/* Period selector */}
+            <div className="flex bg-gray-800 rounded-lg p-1 gap-1">
+              {PERIODOS.map(p => (
+                <button
+                  key={p.value}
+                  onClick={() => setPeriodo(p.value)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    periodo === p.value
+                      ? 'bg-orange-500 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <Button onClick={openNewRec} size="sm" variant="success">
+              <Plus size={15} /> Nova Receita
+            </Button>
+            <Button onClick={openNewDesp} size="sm" variant="secondary">
+              <Plus size={15} /> Nova Despesa
+            </Button>
           </div>
-          <Button onClick={openNew} size="sm">
-            <Plus size={15} /> Nova Despesa
-          </Button>
-        </div>
       </div>
 
       {/* KPI Cards */}
@@ -292,7 +363,7 @@ export function Financeiro() {
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide">Total Entradas</p>
               <p className="text-2xl font-bold text-green-400 mt-1">{fmt(totalEntradas)}</p>
-              <p className="text-xs text-gray-500 mt-1">{entradas.length} O.S. finalizadas</p>
+              <p className="text-xs text-gray-500 mt-1">{entradas.length} lançamentos</p>
             </div>
             <div className="p-2.5 bg-green-400/10 rounded-xl">
               <TrendingUp size={20} className="text-green-400" />
@@ -479,22 +550,40 @@ export function Financeiro() {
                   <span className={`font-semibold ${t.tipo === 'entrada' ? 'text-green-400' : 'text-red-400'}`}>
                     {t.tipo === 'entrada' ? '+' : '−'}{fmt(t.valor)}
                   </span>
-                  {t.tipo === 'saida' && 'raw' in t && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                      <button
-                        onClick={() => openEdit((t as { raw: Despesa }).raw)}
-                        className="p-1 text-gray-500 hover:text-white rounded hover:bg-gray-700 transition-colors"
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                      <button
-                        onClick={() => deleteDespesa(t.id)}
-                        className="p-1 text-gray-500 hover:text-red-400 rounded hover:bg-red-400/10 transition-colors"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  )}
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    {t.tipo === 'saida' && (t as { raw: Despesa | null }).raw && (
+                      <>
+                        <button
+                          onClick={() => openEditDesp((t as { raw: Despesa }).raw)}
+                          className="p-1 text-gray-500 hover:text-white rounded hover:bg-gray-700 transition-colors"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => deleteDespesa(t.id)}
+                          className="p-1 text-gray-500 hover:text-red-400 rounded hover:bg-red-400/10 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    )}
+                    {t.tipo === 'entrada' && (t as { raw: Receita | null }).raw && (
+                      <>
+                        <button
+                          onClick={() => openEditRec((t as { raw: Receita }).raw)}
+                          className="p-1 text-gray-500 hover:text-white rounded hover:bg-gray-700 transition-colors"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => deleteReceita(t.id)}
+                          className="p-1 text-gray-500 hover:text-red-400 rounded hover:bg-red-400/10 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -510,43 +599,84 @@ export function Financeiro() {
         )}
       </Card>
 
-      {/* Modal nova despesa */}
-      <Modal isOpen={modal} onClose={() => setModal(false)} title={editing ? 'Editar Despesa' : 'Nova Despesa'}>
+      {/* Modal despesa */}
+      <Modal isOpen={despModal} onClose={() => setDespModal(false)} title={editingDesp ? 'Editar Despesa' : 'Nova Despesa'}>
         <div className="space-y-4">
           <Input
             label="Descrição *"
-            value={form.descricao}
-            onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))}
-            error={errors.descricao}
+            value={despForm.descricao}
+            onChange={e => setDespForm(p => ({ ...p, descricao: e.target.value }))}
+            error={despErrors.descricao}
             placeholder="Ex: Aluguel do espaço, compra de ferramentas..."
           />
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="Valor (R$) *"
               type="number" min="0.01" step="0.01"
-              value={form.valor}
-              onChange={e => setForm(p => ({ ...p, valor: e.target.value }))}
-              error={errors.valor}
+              value={despForm.valor}
+              onChange={e => setDespForm(p => ({ ...p, valor: e.target.value }))}
+              error={despErrors.valor}
               placeholder="0,00"
             />
             <Input
               label="Data *"
               type="date"
-              value={form.data}
-              onChange={e => setForm(p => ({ ...p, data: e.target.value }))}
-              error={errors.data}
+              value={despForm.data}
+              onChange={e => setDespForm(p => ({ ...p, data: e.target.value }))}
+              error={despErrors.data}
             />
           </div>
           <Select
             label="Categoria"
-            value={form.categoria}
-            onChange={e => setForm(p => ({ ...p, categoria: e.target.value as DespesaCategoria }))}
+            value={despForm.categoria}
+            onChange={e => setDespForm(p => ({ ...p, categoria: e.target.value as DespesaCategoria }))}
           >
             {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
           <div className="flex gap-3 pt-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setModal(false)}>Cancelar</Button>
-            <Button className="flex-1" onClick={save}>{editing ? 'Salvar' : 'Registrar'}</Button>
+            <Button variant="secondary" className="flex-1" onClick={() => setDespModal(false)}>Cancelar</Button>
+            <Button className="flex-1" onClick={saveDesp}>{editingDesp ? 'Salvar' : 'Registrar'}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal receita */}
+      <Modal isOpen={recModal} onClose={() => setRecModal(false)} title={editingRec ? 'Editar Receita' : 'Nova Receita'}>
+        <div className="space-y-4">
+          <Input
+            label="Descrição *"
+            value={recForm.descricao}
+            onChange={e => setRecForm(p => ({ ...p, descricao: e.target.value }))}
+            error={recErrors.descricao}
+            placeholder="Ex: Consultoria, serviço externo..."
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Valor (R$) *"
+              type="number" min="0.01" step="0.01"
+              value={recForm.valor}
+              onChange={e => setRecForm(p => ({ ...p, valor: e.target.value }))}
+              error={recErrors.valor}
+              placeholder="0,00"
+            />
+            <Input
+              label="Data *"
+              type="date"
+              value={recForm.data}
+              onChange={e => setRecForm(p => ({ ...p, data: e.target.value }))}
+              error={recErrors.data}
+            />
+          </div>
+          <Select
+            label="Categoria"
+            value={recForm.categoria}
+            onChange={e => setRecForm(p => ({ ...p, categoria: e.target.value as ReceitaCategoria }))}
+          >
+            {RECEITA_CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+          </Select>
+          <div className="flex gap-3 pt-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setRecModal(false)}>Cancelar</Button>
+            <Button className="flex-1" onClick={saveRec}>{editingRec ? 'Salvar' : 'Registrar'}</Button>
           </div>
         </div>
       </Modal>
