@@ -13,6 +13,7 @@ import { Financeiro } from './pages/Financeiro'
 import { Backup } from './pages/Backup'
 import { Welcome } from './pages/Welcome'
 import { Ajuda } from './pages/Ajuda'
+import { VendaRapida } from './pages/VendaRapida'
 import { Wrench } from 'lucide-react'
 
 function LoadingScreen() {
@@ -44,8 +45,9 @@ function AppRoutes() {
         <Route path="/clientes"   element={<Clientes />} />
         <Route path="/ordens"     element={<OrdemServico />} />
         <Route path="/estoque"    element={<Estoque />} />
-        <Route path="/checkout"   element={<Checkout />} />
-        <Route path="/financeiro" element={<Financeiro />} />
+        <Route path="/checkout"     element={<Checkout />} />
+        <Route path="/venda-rapida" element={<VendaRapida />} />
+        <Route path="/financeiro"   element={<Financeiro />} />
         <Route path="/backup" element={<Backup />} />
         <Route path="/ajuda"  element={<Ajuda />} />
         <Route path="*" element={<Navigate to="/" replace />} />

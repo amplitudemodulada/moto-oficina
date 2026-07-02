@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import type { Cliente, Moto, OrdemServico, Produto, OSStatus, Despesa } from '../types'
+import type { Cliente, Moto, OrdemServico, Produto, OSStatus, Despesa, VendaRapida } from '../types'
 import { storage, gerarId, gerarNumeroOS } from '../utils/storage'
 
 interface AppContextType {
@@ -8,6 +8,7 @@ interface AppContextType {
   ordens: OrdemServico[]
   produtos: Produto[]
   despesas: Despesa[]
+  vendasRapidas: VendaRapida[]
 
   addCliente: (c: Omit<Cliente, 'id' | 'createdAt'>) => Cliente
   updateCliente: (id: string, c: Partial<Cliente>) => void
@@ -30,6 +31,9 @@ interface AppContextType {
   updateDespesa: (id: string, d: Partial<Despesa>) => void
   deleteDespesa: (id: string) => void
 
+  addVendaRapida: (v: Omit<VendaRapida, 'id' | 'createdAt'>) => VendaRapida
+  deleteVendaRapida: (id: string) => void
+
   getClienteById: (id: string) => Cliente | undefined
   getMotoById: (id: string) => Moto | undefined
   getMotosByCliente: (clienteId: string) => Moto[]
@@ -44,12 +48,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ordens, setOrdens] = useState<OrdemServico[]>(() => storage.ordens.getAll())
   const [produtos, setProdutos] = useState<Produto[]>(() => storage.produtos.getAll())
   const [despesas, setDespesas] = useState<Despesa[]>(() => storage.despesas.getAll())
+  const [vendasRapidas, setVendasRapidas] = useState<VendaRapida[]>(() => storage.vendas.getAll())
 
   useEffect(() => { storage.clientes.save(clientes) }, [clientes])
   useEffect(() => { storage.motos.save(motos) }, [motos])
   useEffect(() => { storage.ordens.save(ordens) }, [ordens])
   useEffect(() => { storage.produtos.save(produtos) }, [produtos])
   useEffect(() => { storage.despesas.save(despesas) }, [despesas])
+  useEffect(() => { storage.vendas.save(vendasRapidas) }, [vendasRapidas])
 
   const addCliente = useCallback((data: Omit<Cliente, 'id' | 'createdAt'>): Cliente => {
     const novo: Cliente = { ...data, id: gerarId(), createdAt: new Date().toISOString() }
@@ -142,14 +148,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const getMotosByCliente = useCallback((clienteId: string) => motos.filter(m => m.clienteId === clienteId), [motos])
   const getOrdensByMoto = useCallback((motoId: string) => ordens.filter(o => o.motoId === motoId), [ordens])
 
+  const addVendaRapida = useCallback((data: Omit<VendaRapida, 'id' | 'createdAt'>): VendaRapida => {
+    const nova: VendaRapida = { ...data, id: gerarId(), createdAt: new Date().toISOString() }
+    setVendasRapidas(prev => [...prev, nova])
+    setProdutos(prev => prev.map(p => {
+      const item = data.itens.find(i => i.produtoId === p.id)
+      return item ? { ...p, estoque: Math.max(0, p.estoque - item.quantidade) } : p
+    }))
+    return nova
+  }, [])
+
+  const deleteVendaRapida = useCallback((id: string) => {
+    setVendasRapidas(prev => prev.filter(v => v.id !== id))
+  }, [])
+
   return (
     <AppContext.Provider value={{
-      clientes, motos, ordens, produtos, despesas,
+      clientes, motos, ordens, produtos, despesas, vendasRapidas,
       addCliente, updateCliente, deleteCliente,
       addMoto, updateMoto, deleteMoto,
       addOrdem, updateOrdem, deleteOrdem, updateStatus,
       addProduto, updateProduto, deleteProduto,
       addDespesa, updateDespesa, deleteDespesa,
+      addVendaRapida, deleteVendaRapida,
       getClienteById, getMotoById, getMotosByCliente, getOrdensByMoto,
     }}>
       {children}

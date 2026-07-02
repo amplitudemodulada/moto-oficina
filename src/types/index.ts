@@ -79,3 +79,12 @@ export interface Despesa {
   data: string
   createdAt: string
 }
+
+export interface VendaRapida {
+  id: string
+  itens: ItemOS[]
+  valorMaoDeObra: number
+  formaPagamento?: PaymentMethod
+  total: number
+  createdAt: string
+}

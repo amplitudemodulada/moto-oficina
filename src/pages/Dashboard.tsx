@@ -13,7 +13,7 @@ function fmtDate(iso: string) {
 }
 
 export function Dashboard() {
-  const { ordens, motos, clientes, getClienteById, getMotoById } = useApp()
+  const { ordens, motos, clientes, vendasRapidas, getClienteById, getMotoById } = useApp()
   const navigate = useNavigate()
 
   const hoje = new Date().toDateString()
@@ -22,14 +22,19 @@ export function Dashboard() {
   const finalizadasHoje = ordens.filter(o =>
     o.status === 'finalizada' && o.finalizadaEm && new Date(o.finalizadaEm).toDateString() === hoje
   )
-  const faturamentoHoje = finalizadasHoje.reduce((sum, o) => {
-    const itens = o.itens.reduce((s, i) => s + i.valorUnitario * i.quantidade, 0)
-    return sum + itens + o.valorMaoDeObra
-  }, 0)
-  const faturamentoTotal = ordens.filter(o => o.status === 'finalizada').reduce((sum, o) => {
-    const itens = o.itens.reduce((s, i) => s + i.valorUnitario * i.quantidade, 0)
-    return sum + itens + o.valorMaoDeObra
-  }, 0)
+  const vendasHoje = vendasRapidas.filter(v => new Date(v.createdAt).toDateString() === hoje)
+
+  const faturamentoHoje =
+    finalizadasHoje.reduce((sum, o) => {
+      const itens = o.itens.reduce((s, i) => s + i.valorUnitario * i.quantidade, 0)
+      return sum + itens + o.valorMaoDeObra
+    }, 0) + vendasHoje.reduce((s, v) => s + v.total, 0)
+
+  const faturamentoTotal =
+    ordens.filter(o => o.status === 'finalizada').reduce((sum, o) => {
+      const itens = o.itens.reduce((s, i) => s + i.valorUnitario * i.quantidade, 0)
+      return sum + itens + o.valorMaoDeObra
+    }, 0) + vendasRapidas.reduce((s, v) => s + v.total, 0)
 
   const ultimas = [...ordens].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 8)
 

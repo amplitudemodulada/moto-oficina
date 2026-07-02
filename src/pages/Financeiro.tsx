@@ -9,7 +9,7 @@ import {
   Trash2, Edit2, ArrowUpRight, ArrowDownLeft, Receipt,
   CalendarDays, BarChart3, Filter
 } from 'lucide-react'
-import type { Despesa, DespesaCategoria } from '../types'
+import type { Despesa, DespesaCategoria, VendaRapida } from '../types'
 
 const CATEGORIAS: DespesaCategoria[] = [
   'Aluguel', 'Ferramentas', 'Peças/Insumos', 'Salários', 'Impostos', 'Utilidades', 'Marketing', 'Outros'
@@ -89,7 +89,7 @@ function MiniBarChart({ data }: { data: { label: string; entradas: number; saida
 }
 
 export function Financeiro() {
-  const { ordens, despesas, addDespesa, updateDespesa, deleteDespesa, getClienteById, getMotoById } = useApp()
+  const { ordens, despesas, vendasRapidas, addDespesa, updateDespesa, deleteDespesa, getClienteById, getMotoById } = useApp()
 
   const [periodo, setPeriodo] = useState<Periodo>('mes')
   const [modal, setModal] = useState(false)
@@ -98,9 +98,9 @@ export function Financeiro() {
   const [errors, setErrors] = useState<Partial<DespesaForm>>({})
   const [tipoFiltro, setTipoFiltro] = useState<'todos' | 'entradas' | 'saidas'>('todos')
 
-  // Entradas = O.S. finalizadas no período
-  const entradas = useMemo(() =>
-    ordens
+  // Entradas = O.S. finalizadas + vendas rápidas no período
+  const entradas = useMemo(() => {
+    const fromOS = ordens
       .filter(o => o.status === 'finalizada' && o.finalizadaEm && inPeriod(o.finalizadaEm, periodo))
       .map(o => ({
         id: o.id,
@@ -109,8 +109,19 @@ export function Financeiro() {
         valor: o.itens.reduce((s, i) => s + i.valorUnitario * i.quantidade, 0) + o.valorMaoDeObra,
         data: o.finalizadaEm!,
         extra: o.formaPagamento ? PAYMENT_LABELS[o.formaPagamento] : '',
-      })),
-    [ordens, periodo, getMotoById, getClienteById]
+      }))
+    const fromVendas = vendasRapidas
+      .filter(v => inPeriod(v.createdAt, periodo))
+      .map(v => ({
+        id: v.id,
+        tipo: 'entrada' as const,
+        descricao: `Venda Direta · ${v.itens.map(i => i.nome).join(', ')}`,
+        valor: v.total,
+        data: v.createdAt,
+        extra: v.formaPagamento ? PAYMENT_LABELS[v.formaPagamento] : '',
+      }))
+    return [...fromOS, ...fromVendas]
+  }, [ordens, vendasRapidas, periodo, getMotoById, getClienteById]
   )
 
   const saidas = useMemo(() =>
@@ -146,22 +157,28 @@ export function Financeiro() {
 
   // Chart: últimos 6 meses (ou dias se período for hoje/semana)
   const chartData = useMemo(() => {
+    const hojeStr = new Date().toDateString()
+    function vendasNoPeriodo(fn: (v: VendaRapida) => boolean): number {
+      return vendasRapidas.filter(fn).reduce((s, v) => s + v.total, 0)
+    }
     if (periodo === 'hoje') {
-      // Hourly breakdown (0h-23h)
       return Array.from({ length: 8 }, (_, i) => {
         const h = i * 3
         const label = `${String(h).padStart(2,'0')}h`
         const ent = ordens
           .filter(o => o.status === 'finalizada' && o.finalizadaEm)
-          .filter(o => { const d = new Date(o.finalizadaEm!); return d.toDateString() === new Date().toDateString() && d.getHours() >= h && d.getHours() < h + 3 })
+          .filter(o => { const d = new Date(o.finalizadaEm!); return d.toDateString() === hojeStr && d.getHours() >= h && d.getHours() < h + 3 })
           .reduce((s, o) => s + o.itens.reduce((ss, i) => ss + i.valorUnitario * i.quantidade, 0) + o.valorMaoDeObra, 0)
+        const v = vendasNoPeriodo(v => {
+          const d = new Date(v.createdAt)
+          return d.toDateString() === hojeStr && d.getHours() >= h && d.getHours() < h + 3
+        })
         const sai = despesas
-          .filter(d => { const dd = new Date(d.data); return dd.toDateString() === new Date().toDateString() })
+          .filter(d => { const dd = new Date(d.data); return dd.toDateString() === hojeStr })
           .reduce((s, d) => s + d.valor, 0)
-        return { label, entradas: ent, saidas: i === 0 ? sai : 0 }
+        return { label, entradas: ent + v, saidas: i === 0 ? sai : 0 }
       })
     }
-    // Monthly for last 6 months
     return Array.from({ length: 6 }, (_, i) => {
       const d = new Date(); d.setMonth(d.getMonth() - (5 - i))
       const m = d.getMonth(); const y = d.getFullYear()
@@ -170,12 +187,16 @@ export function Financeiro() {
         .filter(o => o.status === 'finalizada' && o.finalizadaEm)
         .filter(o => { const dd = new Date(o.finalizadaEm!); return dd.getMonth() === m && dd.getFullYear() === y })
         .reduce((s, o) => s + o.itens.reduce((ss, i) => ss + i.valorUnitario * i.quantidade, 0) + o.valorMaoDeObra, 0)
+      const v = vendasNoPeriodo(v => {
+        const dd = new Date(v.createdAt)
+        return dd.getMonth() === m && dd.getFullYear() === y
+      })
       const sai = despesas
         .filter(d => { const dd = new Date(d.data); return dd.getMonth() === m && dd.getFullYear() === y })
         .reduce((s, d) => s + d.valor, 0)
-      return { label, entradas: ent, saidas: sai }
+      return { label, entradas: ent + v, saidas: sai }
     })
-  }, [ordens, despesas, periodo])
+  }, [ordens, vendasRapidas, despesas, periodo])
 
   // By payment method
   const porPagamento = useMemo(() => {
@@ -187,8 +208,14 @@ export function Financeiro() {
         const v = o.itens.reduce((s, i) => s + i.valorUnitario * i.quantidade, 0) + o.valorMaoDeObra
         map[k] = (map[k] ?? 0) + v
       })
+    vendasRapidas
+      .filter(v => inPeriod(v.createdAt, periodo))
+      .forEach(v => {
+        const k = v.formaPagamento ?? 'outros'
+        map[k] = (map[k] ?? 0) + v.total
+      })
     return Object.entries(map).sort((a, b) => b[1] - a[1])
-  }, [ordens, periodo])
+  }, [ordens, vendasRapidas, periodo])
 
   // By expense category
   const porCategoria = useMemo(() => {
