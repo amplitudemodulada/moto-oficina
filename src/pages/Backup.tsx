@@ -4,7 +4,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { storage } from '../utils/storage'
-import { seedDemoData, clearAllData, getAllDataForExport, restoreFromBackup } from '../utils/seed'
+import { getAllDataForExport, restoreFromBackup } from '../utils/seed'
 import { getUsers, resetPasswordAdmin } from '../utils/auth'
 import type { StoredUser } from '../utils/auth'
 import { getTelegramConfig, saveTelegramConfig, sendTelegram, testTelegram, msgLogin } from '../utils/telegram'
@@ -12,13 +12,11 @@ import type { TelegramConfig } from '../utils/telegram'
 import {
   Download, Upload, Database, CheckCircle,
   AlertTriangle, Users, Bike, ClipboardList, Package,
-  TrendingDown, HardDrive, RefreshCw, Info, Sparkles,
-  ShieldCheck, Headset, KeyRound, Eye, EyeOff,
+  TrendingDown, HardDrive, RefreshCw, Info,   ShieldCheck, Headset, KeyRound, Eye, EyeOff,
   Send, BellRing, BellOff, ExternalLink,
 } from 'lucide-react'
 
 const BACKUP_KEY = 'motogest_last_backup'
-const SEED_KEY   = 'motogest_seed_done'
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', {
@@ -41,7 +39,7 @@ const ROLE_INFO = {
   suporte: { label: 'Suporte',       icon: Headset,     color: 'text-blue-400',   bg: 'bg-blue-400/10'   },
 }
 
-type ModalType = 'seed_confirm' | 'import_confirm' | 'success' | 'error' | 'reset_pw' | null
+type ModalType = 'import_confirm' | 'success' | 'error' | 'reset_pw' | null
 
 export function Backup() {
   const { role } = useAuth()
@@ -50,7 +48,6 @@ export function Backup() {
   const [message,       setMessage]       = useState('')
   const [pendingImport, setPendingImport] = useState<ReturnType<typeof getAllDataForExport> | null>(null)
   const [lastBackup,    setLastBackup]    = useState<string>(() => localStorage.getItem(BACKUP_KEY) ?? '')
-  const [seedDone,      setSeedDone]      = useState<boolean>(() => !!localStorage.getItem(SEED_KEY))
 
   // Telegram config
   const [tgConfig,     setTgConfig]     = useState<TelegramConfig>(() => getTelegramConfig())
@@ -141,15 +138,6 @@ export function Backup() {
     if (!pendingImport) return
     restoreFromBackup(pendingImport)
     setPendingImport(null)
-    setModalType(null)
-    window.location.reload()
-  }
-
-  // ── Seed ──────────────────────────────────────────────────────────────────
-  function confirmSeed() {
-    clearAllData()
-    seedDemoData()
-    localStorage.setItem(SEED_KEY, '1')
     setModalType(null)
     window.location.reload()
   }
@@ -277,46 +265,6 @@ export function Backup() {
             <Button className="mt-4" onClick={() => fileRef.current?.click()}>
               <Upload size={16} /> Selecionar arquivo de backup
             </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Demo data */}
-      <Card>
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-purple-400/10 rounded-xl shrink-0">
-            <Sparkles size={22} className="text-purple-400" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-white">Dados de Demonstração</h3>
-            <p className="text-sm text-gray-400 mt-1">
-              Popula o sistema com dados fictícios para explorar todas as funcionalidades.
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-xs text-gray-400">
-              {[
-                ['8 clientes', 'João, Maria, Carlos...'],
-                ['10 motos',   'Honda, Yamaha, Kawasaki...'],
-                ['11 O.S.',    '6 finalizadas + em andamento'],
-                ['15 produtos','Peças, pneus, óleos, serviços'],
-              ].map(([title, sub]) => (
-                <div key={title} className="bg-gray-800/50 rounded-lg p-2.5">
-                  <p className="text-gray-300 font-medium">{title}</p>
-                  <p className="text-gray-600 mt-0.5 leading-tight">{sub}</p>
-                </div>
-              ))}
-            </div>
-
-            {seedDone ? (
-              <div className="flex items-center gap-2 mt-3 text-xs text-green-400 bg-green-400/5 border border-green-400/15 rounded-lg px-3 py-2">
-                <CheckCircle size={12} />
-                Dados de demonstração já foram carregados. Opção bloqueada para proteger dados reais.
-              </div>
-            ) : (
-              <Button variant="secondary" className="mt-4" onClick={() => setModalType('seed_confirm')}>
-                <Sparkles size={16} /> Carregar dados de demonstração
-              </Button>
-            )}
           </div>
         </div>
       </Card>
@@ -466,29 +414,6 @@ export function Backup() {
 
 
       {/* ── Modals ── */}
-
-      {/* Seed confirm */}
-      <Modal isOpen={modalType === 'seed_confirm'} onClose={() => setModalType(null)} title="Carregar Dados de Demonstração">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
-            <AlertTriangle size={20} className="text-yellow-400 shrink-0" />
-            <p className="text-sm text-yellow-300">
-              {hasData
-                ? 'Os dados atuais serão apagados e substituídos pelos dados de demonstração.'
-                : 'O sistema será preenchido com dados fictícios de demonstração.'}
-            </p>
-          </div>
-          <p className="text-sm text-gray-400">
-            Serão criados 8 clientes, 10 motos, 11 ordens de serviço, 15 produtos em estoque e 8 despesas de demonstração.
-          </p>
-          <div className="flex gap-3 pt-1">
-            <Button variant="secondary" className="flex-1" onClick={() => setModalType(null)}>Cancelar</Button>
-            <Button className="flex-1" onClick={confirmSeed}>
-              <Sparkles size={16} /> Confirmar e Carregar
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Import confirm */}
       <Modal isOpen={modalType === 'import_confirm'} onClose={() => setModalType(null)} title="Restaurar Backup">
